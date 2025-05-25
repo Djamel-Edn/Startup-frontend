@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import { useState, useEffect } from "react";
 import {
   makeStyles,
@@ -427,6 +426,7 @@ const Progress = () => {
       console.log("Fetching project data for projectId:", projectId);
       try {
         const projectData = await getProjectById(projectId);
+        console.log(projectData, "Project data fetched successfully");
         if (!projectData || !projectData.name) {
           setProjectName("Project");
         } else {
@@ -437,44 +437,15 @@ const Progress = () => {
         setProjectName("Project");
       }
 
-      try {
-        console.log("Fetching sessions for projectId:", projectId);
-        const sessionsData = await getProjectSessions(projectId);
-        setSessions(sessionsData || []);
-      } catch (err) {
-        console.warn("Sessions endpoint error:", err);
-        setSessions([]);
-      }
+      // try {
+      //   console.log("Fetching sessions for projectId:", projectId);
+      //   const sessionsData = await getProjectSessions(projectId);
+      //   setSessions(sessionsData || []);
+      // } catch (err) {
+      //   console.warn("Sessions endpoint error:", err);
+      //   setSessions([]);
+      // }
 
-      try {
-        console.log("Fetching members for projectId:", projectId);
-        const membersData = await getProjectMembers(projectId);
-        setMembers(
-          (membersData?.relationData || []).map((item: any) => ({
-            id: item.id,
-            name: item.name ?? item.fullName ?? item.username ?? "Unknown",
-            avatar: item.avatar,
-          }))
-        );
-      } catch (err) {
-        console.warn("Members endpoint error:", err);
-        setMembers([]);
-      }
-
-      try {
-        console.log("Fetching encadrants for projectId:", projectId);
-        const encadrantsData = await getProjectEncadrants(projectId);
-        setEncadrants(
-          (encadrantsData?.relationData || []).map((item: any) => ({
-            id: item.id,
-            name: item.name ?? item.fullName ?? item.username ?? "Unknown",
-            avatar: item.avatar,
-          }))
-        );
-      } catch (err) {
-        console.warn("Encadrants endpoint error:", err);
-        setEncadrants([]);
-      }
     } catch (err) {
       console.error("Critical error fetching project data:", err);
       setError(err instanceof Error ? err.message : "Failed to load project data");

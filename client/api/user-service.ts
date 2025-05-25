@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("authToken");
-
+  console.log("fetchWithAuth: Using Url", url );
   const headers = {
     "Content-Type": "application/json",
     "Accept": "application/json",

@@ -166,30 +166,57 @@ const Team = () => {
   const {user}=useAuthContext()
   const projectId=user?.projectId
   useEffect(() => {
-    const fetchData = async () => {
-      if (!projectId) {
-        console.warn("Team: projectId is not defined, skipping fetchData");
-        return;
-      }
-      try {
-        console.debug("Team: Fetching project members and mentors", { projectId });
-        const membersData = await getProjectMembers(projectId);
-        const encadrantsData = await getProjectEncadrants(projectId);
-        console.debug("Team: Successfully fetched project data", {
-          members: membersData.relationData,
-          mentors: encadrantsData.relationData,
-        });
-        setMembers(membersData.relationData);
-        setMentors(encadrantsData.relationData);
-      } catch (error) {
-        console.error("Team: Failed to fetch project data", {
-          error: (error as Error).message,
-          stack: (error as Error).stack,
-        });
-      }
-    };
-    if (projectId) fetchData();
-  }, [projectId]);
+  const fetchData = async () => {
+    if (!projectId) {
+      console.warn(`[${new Date().toISOString()}] Team: projectId is undefined or null, skipping fetchData`);
+      return;
+    }
+
+    try {
+      console.debug(`[${new Date().toISOString()}] Team: Initiating fetch for project members and mentors`, { projectId });
+
+      // Fetch members and mentors concurrently for better performance
+      const [membersData, encadrantsData] = await Promise.all([
+        getProjectMembers(projectId).then(data => {
+          console.debug(`[${new Date().toISOString()}] Team: Successfully fetched project members`, {
+            projectId,
+            memberCount: data.relationData?.length || 0,
+          });
+          return data;
+        }),
+        getProjectEncadrants(projectId).then(data => {
+          console.debug(`[${new Date().toISOString()}] Team: Successfully fetched project mentors`, {
+            projectId,
+            mentorCount: data.relationData?.length || 0,
+          });
+          return data;
+        }),
+      ]);
+
+      // Log combined success state
+      console.debug(`[${new Date().toISOString()}] Team: Successfully fetched all project data`, {
+        projectId,
+        members: membersData.relationData,
+        mentors: encadrantsData.relationData,
+      });
+
+      // Update state
+      setMembers(membersData.relationData);
+      setMentors(encadrantsData.relationData);
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Team: Failed to fetch project data`, {
+        projectId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+  };
+
+  if (projectId) {
+    console.info(`[${new Date().toISOString()}] Team: Starting data fetch for project`, { projectId });
+    fetchData();
+  }
+}, [projectId]);
 
   const fetchUsers = async () => {
     console.debug("Team: Initiating fetchUsers for getAllUsers", { isModalOpen });
@@ -331,8 +358,8 @@ const Team = () => {
           </div>
 
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Members ({members.length})</h2>
-            {members.length > 0 ? (
+            <h2 className={styles.sectionTitle}>Members ({members?.length})</h2>
+            {members?.length > 0 ? (
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -382,11 +409,11 @@ const Team = () => {
           </div>
 
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Mentors ({mentors.length})</h2>
-            {mentors.length > 0 ? (
+            <h2 className={styles.sectionTitle}>Mentors ({mentors?.length})</h2>
+            {mentors?.length > 0 ? (
               <table className={styles.table}>
                 <tbody>
-                  {mentors.map((mentor) => (
+                  {mentors?.map((mentor) => (
                     <tr key={mentor.id} className={styles.tableRow}>
                       <td className={`${styles.tableCell} ${styles.checkboxCell}`}>
                         <Checkbox
