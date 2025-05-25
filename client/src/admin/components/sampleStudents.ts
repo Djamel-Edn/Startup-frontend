@@ -1,0 +1,51 @@
+export const sampleStudents = [
+  {
+    id: 1,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "member",
+    year: "1 CS",
+  },
+  {
+    id: 2,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "leader",
+    year: "1 CS",
+  },
+  {
+    id: 3,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "No team",
+    year: "1 CS",
+  },
+  {
+    id: 4,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "member",
+    year: "1 CS",
+  },
+  {
+    id: 5,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "leader",
+    year: "1 CS",
+  },
+  {
+    id: 6,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "No team",
+    year: "1 CS",
+  },
+  {
+    id: 7,
+    name: "Arlene McCoy",
+    email: "u.name@esi-sba.dz",
+    role: "member",
+    year: "1 CS",
+  },
+];
