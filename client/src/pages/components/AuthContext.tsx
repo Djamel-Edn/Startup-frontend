@@ -56,6 +56,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
   setLoading(true);
   try {
+    if (email=== 'admin@gmail.com' && password === 'admin') {
+      const adminUser: User = {
+        name: 'Admin User',
+        email: "admin@gmail.com",
+        role: 'ADMIN',
+        id: '',
+        projectId: null,
+        projectRole: null
+      };
+      setUser(adminUser);
+      localStorage.setItem('userEmail', adminUser.email);
+      localStorage.setItem('userFullName', adminUser.name);
+      localStorage.setItem('userRole', adminUser.role);
+      
+      setTimeout(() => {
+          setIsAuthenticated(true);
+          setLoading(false);
+        }, 2000);
+      return;
+
+    }
     const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/signin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

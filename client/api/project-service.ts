@@ -6,6 +6,7 @@ import {
   ProjectRelation,
   ProjectMember,
   Project,
+  Workshop,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
@@ -530,6 +531,39 @@ export const deleteFeedback = async (sessionId: string, feedbackId: string) => {
       stack: err instanceof Error ? err.stack : undefined,
     });
     throw err;
+  }
+};
+export const getWorkshops = async (projectId?: string): Promise<Workshop[]> => {
+  const logPrefix = `[${new Date().toISOString()}] getWorkshops`;
+  try {
+    console.log(`${logPrefix}: Fetching workshops`, { projectId });
+    const query = projectId ? `?projectId=${projectId}` : "";
+    const workshops = await fetchWithAuth(`/projects/workshops${query}`);
+    console.log(`${logPrefix}: Successfully fetched workshops`, { workshopCount: workshops.length });
+    return workshops || [];
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch workshops`, {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return [];
+  }
+};
+
+export const getPastWorkshops = async (projectId?: string): Promise<Workshop[]> => {
+  const logPrefix = `[${new Date().toISOString()}] getPastWorkshops`;
+  try {
+    console.log(`${logPrefix}: Fetching past workshops`, { projectId });
+    const query = projectId ? `?projectId=${projectId}` : "";
+    const workshops = await fetchWithAuth(`/workshops/past${query}`);
+    console.log(`${logPrefix}: Successfully fetched past workshops`, { workshopCount: workshops.length });
+    return workshops || [];
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch past workshops`, {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return [];
   }
 };
 

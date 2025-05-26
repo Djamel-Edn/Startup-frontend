@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Outlet } from "react-router-dom";
 import { makeStyles, tokens } from "@fluentui/react-components";
 import Header from "./Header";
@@ -11,8 +9,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     backgroundColor: tokens.colorNeutralBackground2,
-    padding: "0",
-    margin: "0",
+    height: "100vh",
   },
   header: {
     width: "100%",
@@ -43,7 +40,7 @@ const DashboardLayout: React.FC = () => {
   const styles = useStyles();
 
   return (
-    <div className={styles.root} style={{ height: "100vh" }}>
+    <div className={styles.root}>
       <div className={styles.header}>
         <Header />
       </div>

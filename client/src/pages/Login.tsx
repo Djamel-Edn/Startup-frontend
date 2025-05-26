@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import {
   makeStyles,
@@ -11,12 +9,12 @@ import {
   Checkbox,
   Label,
 } from "@fluentui/react-components";
-import logo from "../assets/Logo Image.svg";
+import { Eye24Filled, EyeOff24Filled } from "@fluentui/react-icons";
 import { Link, useNavigate } from "react-router-dom";
 import Input from "./components/Input";
-import { useTheme } from "../ThemeContext"
-import { Eye24Filled, EyeOff24Filled } from "@fluentui/react-icons";
+import { useTheme } from "../ThemeContext";
 import { useAuthContext } from "./components/AuthContext";
+import logo from "../assets/Logo Image.svg";
 
 const useStyles = makeStyles({
   background: {
@@ -64,7 +62,7 @@ const useStyles = makeStyles({
     cursor: "pointer",
     marginTop: "0.25rem",
     ":hover": {
-      backgroundColor: tokens.colorBrandBackground3Static,
+      backgroundColor: tokens.colorBrandBackgroundHover,
     },
   },
   text: {
@@ -160,7 +158,7 @@ const useStyles = makeStyles({
   },
 });
 
-const Login = () => {
+const Login: React.FC = () => {
   const classes = useStyles();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
@@ -173,14 +171,14 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
       await login(email, password);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -188,23 +186,33 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const dest =
-        user.role === 'SUPERVISOR'
-          ? '/mentor/projects-management'
-          : '/progress';
+      console.log("User authenticated:", user);
+      let dest = "/progress";
+      if (user.role === "ADMIN") {
+        dest = "/admin/projects";
+      } else if (user.role === "SUPERVISOR") {
+        dest = "/mentor/projects-management";
+      } else {
+        const hasSeenPrompt = localStorage.getItem("hasSeenStartupPrompt") === "true";
+        if (user.projectId) {
+          dest = "/progress";
+        }else{
+          dest = hasSeenPrompt ? "/progress" : "/startup";
+
+        }
+
+      }
       navigate(dest, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
-
-
 
   return (
     <div className={classes.background}>
       <form className={classes.container} onSubmit={handleSubmit}>
         <div className={classes.header}>
           <Image
-            src={logo || "/placeholder.svg"}
-            alt="logo"
+            src={logo}
+            alt="ESI SBA Incubator Logo"
             className={mergeClasses(classes.logo, isDarkMode && classes.logoDark)}
           />
           <Text as="h1" className={classes.title}>
@@ -219,6 +227,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             placeholder="m.riad@esi-sba.dz"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            type="email"
           />
 
           <div className={classes.passwordWrapper}>
@@ -234,6 +243,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={classes.inputField}
+                required
               />
               <button
                 type="button"
@@ -247,10 +257,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             <div className={classes.divider}></div>
           </div>
 
-          <Button type="submit" className={classes.button} disabled={loading}>
-            {loading ? "Signing In..." : "Sign In"}
-          </Button>
-
           <div className={classes.rememberForgotRow}>
             <Checkbox
               label="Remember Me"
@@ -261,6 +267,10 @@ const handleSubmit = async (e: React.FormEvent) => {
               Forgot Password?
             </Link>
           </div>
+
+          <Button type="submit" className={classes.button} disabled={loading}>
+            {loading ? "Signing In..." : "Sign In"}
+          </Button>
 
           <div className={classes.textSection}>
             <Text className={mergeClasses(classes.text, classes.text_link)}>
@@ -276,4 +286,4 @@ const handleSubmit = async (e: React.FormEvent) => {
   );
 };
 
-export default Login;
+export default Login; 

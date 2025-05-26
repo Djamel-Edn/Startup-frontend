@@ -1,6 +1,4 @@
-"use client"
-
-import { Divider, makeStyles, tokens, Tooltip } from "@fluentui/react-components"
+import { Divider, makeStyles, tokens, Tooltip } from "@fluentui/react-components";
 import {
   PeopleTeamRegular,
   PeopleTeamFilled,
@@ -8,30 +6,33 @@ import {
   SettingsFilled,
   SignOutRegular,
   SignOutFilled,
-  GridRegular,
-  GridFilled,
+  DesktopTowerRegular,
+  DesktopTowerFilled,
   DualScreenStatusBarRegular,
   DualScreenStatusBarFilled,
   HeadsetRegular,
   HeadsetFilled,
-  DesktopTowerRegular,
-  DesktopTowerFilled,
-  BadgeRegular,
-} from "@fluentui/react-icons"
-import { Link, useLocation, useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { useAuthContext } from "./AuthContext"
+  BookRegular,
+  BookFilled,
+  PeopleRegular,
+  PeopleFilled,
+  DocumentRegular,
+  DocumentFilled,
+} from "@fluentui/react-icons";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useAuthContext } from "./AuthContext";
 
 const useStyles = makeStyles({
   sidebar: {
     backgroundColor: tokens.colorNeutralBackground3,
     width: "260px",
-    Height: "100%", 
+    height: "100%",
     display: "flex",
     flexDirection: "column",
     borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
-    padding: "12px 0", 
-    gap: "12px", 
+    padding: "12px 0",
+    gap: "12px",
     transform: "translateX(-100%)",
     transition: "transform 0.3s ease-in-out",
     "@media (max-width: 768px)": {
@@ -53,11 +54,11 @@ const useStyles = makeStyles({
   navItem: {
     display: "flex",
     alignItems: "center",
-    padding: "10px 16px", 
+    padding: "10px 16px",
     color: tokens.colorNeutralForeground2,
     textDecoration: "none",
     fontSize: "14px",
-    height: "40px", 
+    height: "40px",
     gap: "12px",
     cursor: "pointer",
     position: "relative",
@@ -129,31 +130,57 @@ const useStyles = makeStyles({
     width: "100%",
     marginBottom: "2rem",
   },
-})
+});
 
-const Sidebar = () => {
-  const styles = useStyles()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { logout } = useAuthContext()
-  const { user } = useAuthContext()
-  const [isVisible, setIsVisible] = useState(false)
-  const [sidebarHeight, setSidebarHeight] = useState("calc(100vh - 60px)")
+const Sidebar: React.FC = () => {
+  const styles = useStyles();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuthContext();
+  const [isVisible, setIsVisible] = useState(false);
+  const [sidebarHeight, setSidebarHeight] = useState("calc(100vh - 60px)");
 
   useEffect(() => {
-    setIsVisible(true)
+    setIsVisible(true);
     const updateHeight = () => {
-      setSidebarHeight(`${window.innerHeight - 60}px`)
-    }
-    updateHeight()
-    window.addEventListener("resize", updateHeight)
-    return () => window.removeEventListener("resize", updateHeight)
-  }, [])
+      setSidebarHeight(`${window.innerHeight - 60}px`);
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
 
   const handleLogout = async () => {
-    await logout()
-    navigate("/login")
-  }
+    await logout();
+    navigate("/login");
+  };
+
+  const adminNavItems = [
+    {
+      label: "Students",
+      regularIcon: <PeopleRegular />,
+      filledIcon: <PeopleFilled />,
+      path: "/admin/student",
+    },
+    {
+      label: "Teams",
+      regularIcon: <PeopleTeamRegular />,
+      filledIcon: <PeopleTeamFilled />,
+      path: "/admin/teams",
+    },
+    {
+      label: "Projects",
+      regularIcon: <DocumentRegular />,
+      filledIcon: <DocumentFilled />,
+      path: "/admin/projects",
+    },
+    {
+      label: "Trainings",
+      regularIcon: <DualScreenStatusBarRegular />,
+      filledIcon: <DualScreenStatusBarFilled />,
+      path: "/admin/trainings",
+    },
+  ];
 
   const studentNavItems = [
     {
@@ -174,12 +201,13 @@ const Sidebar = () => {
       filledIcon: <DualScreenStatusBarFilled />,
       path: "/training",
     },
-  ]
+  ];
 
   const supervisorNavItems = [
     {
       label: "Projects Management",
-      regularIcon: <BadgeRegular />,
+      regularIcon: <DocumentRegular />,
+      filledIcon: <DocumentFilled />,
       path: "/mentor/projects-management",
     },
     {
@@ -188,7 +216,7 @@ const Sidebar = () => {
       filledIcon: <PeopleTeamFilled />,
       path: "/mentor/teams-management",
     },
-  ]
+  ];
 
   const bottomNavItems = [
     {
@@ -209,9 +237,14 @@ const Sidebar = () => {
       filledIcon: <SignOutFilled />,
       path: "/logout",
     },
-  ]
+  ];
 
-  const topNavItems = user?.role === "SUPERVISOR" ? supervisorNavItems : studentNavItems
+  const topNavItems =
+    user?.role === "ADMIN"
+      ? adminNavItems
+      : user?.role === "SUPERVISOR"
+      ? supervisorNavItems
+      : studentNavItems;
 
   return (
     <nav className={`${styles.sidebar} ${isVisible ? styles.sidebarVisible : ""}`} style={{ height: sidebarHeight }}>
@@ -220,18 +253,26 @@ const Sidebar = () => {
           <Tooltip content={item.label} relationship="label" key={item.label}>
             <Link
               to={item.path}
-              className={`${styles.navItem} ${location.pathname === item.path || (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects")) ? styles.activeNavItem : ""}`}
+              className={`${styles.navItem} ${
+                location.pathname === item.path ||
+                (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects")) ||
+                (item.label === "Projects" && location.pathname.startsWith("/admin/projects"))
+                  ? styles.activeNavItem
+                  : ""
+              }`}
             >
               <span
                 className={
                   location.pathname === item.path ||
-                  (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects"))
+                  (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects")) ||
+                  (item.label === "Projects" && location.pathname.startsWith("/admin/projects"))
                     ? styles.activeIcon
                     : styles.icon
                 }
               >
                 {location.pathname === item.path ||
-                (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects"))
+                (item.label === "Projects Management" && location.pathname.startsWith("/mentor/projects")) ||
+                (item.label === "Projects" && location.pathname.startsWith("/admin/projects"))
                   ? item.filledIcon || item.regularIcon
                   : item.regularIcon}
               </span>
@@ -269,11 +310,11 @@ const Sidebar = () => {
                 <span className={styles.navItemText}>{item.label}</span>
               </Link>
             </Tooltip>
-          ),
+          )
         )}
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

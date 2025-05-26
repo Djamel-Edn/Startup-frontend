@@ -12,6 +12,7 @@ export interface Feedback {
 }
 
 export interface Session {
+  time: string;
   id: string;
   date: string;
   deliverables: Deliverable[];
@@ -58,4 +59,15 @@ export interface Project {
   juryMembers?: ProjectMember[];
   teamId: string;
   progress: ProjectProgress;
+}
+
+export interface Workshop{
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  duration: number;
+  location: string;
+  author: string;
 }
