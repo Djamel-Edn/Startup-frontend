@@ -12,8 +12,6 @@ import {
   DualScreenStatusBarFilled,
   HeadsetRegular,
   HeadsetFilled,
-  BookRegular,
-  BookFilled,
   PeopleRegular,
   PeopleFilled,
   DocumentRegular,
@@ -27,19 +25,16 @@ const useStyles = makeStyles({
   sidebar: {
     backgroundColor: tokens.colorNeutralBackground3,
     width: "260px",
-    height: "100%",
     display: "flex",
     flexDirection: "column",
+    minHeight: "96%", 
     borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
-    padding: "12px 0",
     gap: "12px",
-    transform: "translateX(-100%)",
-    transition: "transform 0.3s ease-in-out",
+    marginTop: "16px",
     "@media (max-width: 768px)": {
       width: "100%",
-      height: "auto",
-      minHeight: "auto",
       gap: "1rem",
+      height: "auto",
     },
     justifyContent: "space-between",
   },
@@ -50,11 +45,12 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     width: "100%",
+    marginTop: "4px",
   },
   navItem: {
     display: "flex",
     alignItems: "center",
-    padding: "10px 16px",
+    padding: "0 16px",
     color: tokens.colorNeutralForeground2,
     textDecoration: "none",
     fontSize: "14px",
@@ -118,17 +114,16 @@ const useStyles = makeStyles({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    maxWidth: "calc(100% - 32px)",
   },
   customDivider: {
     backgroundColor: tokens.colorNeutralStroke1,
-    margin: "4px 0",
+    margin: "6px 0",
   },
   bottomItems: {
     display: "flex",
     flexDirection: "column",
     width: "100%",
-    marginBottom: "2rem",
+    marginBottom: "10px",
   },
 });
 
@@ -138,16 +133,9 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuthContext();
   const [isVisible, setIsVisible] = useState(false);
-  const [sidebarHeight, setSidebarHeight] = useState("calc(100vh - 60px)");
 
   useEffect(() => {
     setIsVisible(true);
-    const updateHeight = () => {
-      setSidebarHeight(`${window.innerHeight - 60}px`);
-    };
-    updateHeight();
-    window.addEventListener("resize", updateHeight);
-    return () => window.removeEventListener("resize", updateHeight);
   }, []);
 
   const handleLogout = async () => {
@@ -247,7 +235,7 @@ const Sidebar: React.FC = () => {
       : studentNavItems;
 
   return (
-    <nav className={`${styles.sidebar} ${isVisible ? styles.sidebarVisible : ""}`} style={{ height: sidebarHeight }}>
+    <nav className={`${styles.sidebar} ${isVisible ? styles.sidebarVisible : ""}`}>
       <div className={styles.navSection}>
         {topNavItems.map((item) => (
           <Tooltip content={item.label} relationship="label" key={item.label}>
@@ -317,4 +305,4 @@ const Sidebar: React.FC = () => {
   );
 };
 
-export default Sidebar;
+export default Sidebar; 

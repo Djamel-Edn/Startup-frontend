@@ -12,11 +12,13 @@ export interface Feedback {
 }
 
 export interface Session {
-  time: string;
   id: string;
   date: string;
-  deliverables: Deliverable[];
-  feedbacks: Feedback[];
+  feedback: Feedback;
+  module1:String;
+  module2:String;
+  module3:String;
+  module4:String;
 }
 
 export interface ProjectProgress {
@@ -31,9 +33,12 @@ export interface ProjectMember {
   firstName: string;
   lastName: string;
   email: string;
+  Year: string;
+  role: string;
 }
 
 export interface ProjectRelation {
+  data: any;
   projectId: string;
   relationType: string;
   relationData: ProjectMember[];

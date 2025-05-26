@@ -7,7 +7,7 @@ import TeamsManagement from './pages/admin/TeamManagement';
 import TrainingManagement from './pages/admin/TrainingManagement';
 import StartupPrompt from './pages/StartupPrompt';
 
-const Home = React.lazy(() => import('./pages/Home'));
+const Home = React.lazy(() => import('./pages/Home/Home'));
 const Login = React.lazy(() => import('./pages/Login'));
 const SignUpSelection = React.lazy(() => import('./pages/SignUpSelection'));
 const StudentSignUp = React.lazy(() => import('./pages/StudentSignUp'));

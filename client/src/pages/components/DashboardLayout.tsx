@@ -2,23 +2,28 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import { makeStyles, tokens } from "@fluentui/react-components";
 import Header from "./Header";
-import Sidebar from "./sideBar";
+import Sidebar from "./sideBar"; 
 
 const useStyles = makeStyles({
   root: {
     display: "flex",
     flexDirection: "column",
+    minHeight: "100vh", // Ensure full viewport height
     backgroundColor: tokens.colorNeutralBackground2,
-    height: "100vh",
+    boxSizing: "border-box", // Prevent padding/margin overflow
   },
   header: {
     width: "100%",
+    height: "60px", // Fixed header height
+    flexShrink: 0, // Prevent header from shrinking
   },
   contentWrapper: {
     display: "flex",
-    height: "calc(100vh - 60px)",
+    flex: 1, // Fill remaining height
+    height: "calc(100vh - 60px)", // Subtract header height
     "@media (max-width: 768px)": {
       flexDirection: "column",
+      height: "auto", // Allow natural height on mobile
     },
   },
   sidebar: {
@@ -33,6 +38,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     overflow: "auto",
     padding: "1rem",
+    boxSizing: "border-box", // Prevent padding overflow
   },
 });
 

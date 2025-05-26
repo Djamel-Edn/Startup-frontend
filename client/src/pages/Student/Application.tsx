@@ -614,7 +614,6 @@ const Application: React.FC = () => {
       navigate(-1)
     }
   }
-console.log(formData)
 
   return (
     <div className={classes.background}>

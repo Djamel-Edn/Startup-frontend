@@ -7,7 +7,8 @@ import {
   ChevronUp20Regular,
   ChevronDown20Regular,
 } from "@fluentui/react-icons";
-import { getWorkshops, getPastWorkshops } from "../../../api/project-service";
+import { getWorkshops } from "../../../api/project-service";
+import { getPastWorkshops } from "../../../api/user-service";
 import { Workshop } from "../../../types";
 import { useAuthContext } from "../components/AuthContext";
 import { Link as RouterLink } from "react-router-dom";
@@ -17,20 +18,18 @@ const useStyles = makeStyles({
     display: "flex",
     backgroundColor: tokens.colorNeutralBackground2,
     flex: 1, // Ensure it takes available space
-    overflow: "hidden", // Prevent root-level scrolling
-  },
+    },
   mainContent: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden", // Prevent mainContent scrolling
   },
   content: {
-    padding: "0 1.5rem", // Reduced padding
+    padding: "0 1.5rem",
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflowY: "auto", // Allow scrolling only within content
+    overflowY: "auto", 
   },
   pageTitle: {
     fontSize: "24px",
@@ -130,7 +129,7 @@ const useStyles = makeStyles({
     gap: "12px", // Reduced gap
     flex: 1,
     overflowY: "auto", // Allow scrolling for long workshop lists
-    maxHeight: "300px", // Limit height to prevent overflow
+    maxHeight: "320px", // Limit height to prevent overflow
   },
   workshopItem: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -189,9 +188,9 @@ const useStyles = makeStyles({
   pastWorkshopsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "12px", // Reduced gap
-    maxHeight: "300px", // Limit height
-    overflowY: "auto", // Allow internal scrolling
+    gap: "12px", 
+    maxHeight: "300px",
+    overflowY: "auto",
     "@media (max-width: 768px)": {
       gridTemplateColumns: "1fr",
     },
@@ -277,24 +276,29 @@ const Training: React.FC = () => {
 
   const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-  useEffect(() => {
-    const fetchWorkshops = async () => {
-      setIsLoading(true);
-      try {
-        const workshopData = await getWorkshops();
-        setWorkshops(workshopData);
-        const pastWorkshopData = await getPastWorkshops();
-        setPastWorkshops(pastWorkshopData);
-      } catch (error) {
-        console.error("Failed to fetch workshops:", error);
-        setWorkshops([]);
-        setPastWorkshops([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchWorkshops();
-  }, [projectId, isAdmin]);
+ const [error, setError] = useState<string | null>(null);
+
+useEffect(() => {
+  const fetchWorkshops = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const workshopData = await getWorkshops();
+      setWorkshops(workshopData);
+      const pastWorkshopData = await getPastWorkshops();
+      setPastWorkshops(pastWorkshopData);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch workshops";
+      console.error("Failed to fetch workshops:", error);
+      setError(errorMessage);
+      setWorkshops([]);
+      setPastWorkshops([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  fetchWorkshops();
+}, [projectId, isAdmin]);
 
   const getCalendarDays = () => {
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);

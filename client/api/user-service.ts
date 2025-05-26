@@ -1,14 +1,14 @@
-import { ProjectMember } from '../types';
+import { ProjectMember, Workshop } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("authToken");
-  console.log("fetchWithAuth: Using Url", url );
+  console.log("fetchWithAuth: Using Url", url);
   const headers = {
     "Content-Type": "application/json",
     "Accept": "application/json",
-    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -36,7 +36,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     const isJson = contentType?.includes("application/json");
 
     if (!response.ok) {
-      let errorMessage = `API request failed with status ${response.status}`;
+      let errorMessage = `API request failed with status ${response.status} ${response.statusText}`;
       let errorDetails: any = null;
 
       if (isJson) {
@@ -54,8 +54,8 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
         }
       } else {
         const text = await response.text();
-        errorDetails = text;
-        console.error("fetchWithAuth: Error response body (non-JSON)", text.substring(0, 100) + "..."); 
+        errorDetails = text || "(empty response)";
+        console.error("fetchWithAuth: Error response body (non-JSON)", text || "(empty response)");
         if (text.includes("<html")) {
           errorMessage = `Received HTML response instead of JSON. Possible wrong endpoint or server error. Status: ${response.status}`;
         } else {
@@ -72,8 +72,15 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
       return data;
     } else {
       const text = await response.text();
-      console.error("fetchWithAuth: Expected JSON but received text", text.substring(0, 100) + "...");
-      throw new Error(`Expected JSON response but received: ${text.substring(0, 100) + "..."}`);
+      console.error("fetchWithAuth: Expected JSON but received", {
+        contentType,
+        body: text || "(empty response)",
+      });
+      throw new Error(
+        `Expected JSON response but received ${contentType || "no content-type"}: ${
+          text || "(empty response)"
+        }`
+      );
     }
   } catch (error) {
     console.error("fetchWithAuth: Request failed", {
@@ -138,37 +145,52 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const getAllUsers = async (): Promise<ProjectMember[]> => {
+  const logPrefix = `[${new Date().toISOString()}] getAllUsers`;
+  try {
+    console.log(`${logPrefix}: Fetching all users`);
+    const users = await fetchWithAuth(`/users`);
+
+    return users;
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch users`, {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw new Error("Invalid user data: Some users do not match the expected format");
+  }
+};
+
+export const getPastWorkshops = async (): Promise<Workshop[]> => {
+  const logPrefix = `[${new Date().toISOString()}] getPastWorkshops`;
 
   try {
-    const data = await fetchWithAuth("/users/");
-    if (!Array.isArray(data)) {
-      console.error("getAllUsers: Expected an array but received", data);
-      throw new Error("Invalid response format: Expected an array of users");
-    }
+    console.debug(`${logPrefix}: Fetching past workshops`);
 
-    const users = data as ProjectMember[];
-    const invalidUsers = users.filter(
-      (user) =>
-        !user ||
-        typeof user.id !== "string" ||
-        typeof user.email !== "string" ||
-        typeof user.firstName !== "string" ||
-        typeof user.lastName !== "string"
-    );
-
-    if (invalidUsers.length > 0) {
-      console.error("getAllUsers: Found invalid user objects in response", invalidUsers);
-      throw new Error("Invalid user data: Some users do not match the expected format");
-    }
-
-    console.debug("getAllUsers: Successfully fetched users", users);
-    return users;
-  } catch (error) {
-    console.error("getAllUsers: Failed to fetch users", {
-      error: (error as Error).message,
-      stack: (error as Error).stack,
+    const response = await fetch(`${API_BASE_URL}/workshops/past`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+      },
     });
-    throw error;
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.debug(`${logPrefix}: Successfully fetched past workshops`, {
+      workshopCount: Array.isArray(data) ? data.length : 0,
+    });
+
+    return Array.isArray(data) ? data as Workshop[] : [];
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch past workshops`, {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return [];
   }
 };
 

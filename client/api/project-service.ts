@@ -69,9 +69,9 @@ export const fetchProjectIdByUser = async (
 export const getProjectById = async (projectId: string): Promise<Project> => {
   const logPrefix = `[${new Date().toISOString()}] getProjectById`;
   try {
-    console.debug(`${logPrefix}: Fetching project`, { projectId });
+    console.log(`${logPrefix}: Fetching project`, { projectId });
     const project = await fetchWithAuth(`/projects/${projectId}`);
-    console.debug(`${logPrefix}: Successfully fetched project`, { projectId, project });
+    console.log(`${logPrefix}: Successfully fetched project`, { projectId, project });
     return project;
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch project`, {
@@ -100,43 +100,37 @@ export const getProjectSessions = async (projectId: string): Promise<Session[]> 
   }
 };
 
-export const getProjectMembers = async (projectId: string): Promise<ProjectRelation> => {
+export const getProjectMembers = async (projectId: string): Promise<ProjectMember[]> => {
   const logPrefix = `[${new Date().toISOString()}] getProjectMembers`;
   try {
-    console.log(`${logPrefix}: Fetching members`, { projectId });
-    const members = await fetchWithAuth(`/projects/${projectId}/relation?relationType=members`);
-    console.log(`${logPrefix}: Successfully fetched members`, {
-      projectId,
-      memberCount: members.relationData?.length || 0,
-    });
-    return members;
+    console.debug(`${logPrefix}: Fetching members`, { projectId });
+    const response = await fetchWithAuth(`/projects/${projectId}/team?relationType=encadrants`);
+    console.debug(`${logPrefix}: Raw response`, { projectId, response });
+
+    return response.data.data;  
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch members`, {
       projectId,
       error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
     });
-    throw err;
+    return [];
   }
 };
 
-export const getProjectEncadrants = async (projectId: string): Promise<ProjectRelation> => {
+export const getProjectEncadrants = async (projectId: string): Promise< ProjectMember[]> => {
   const logPrefix = `[${new Date().toISOString()}] getProjectEncadrants`;
   try {
-    console.log(`${logPrefix}: Fetching encadrants`, { projectId });
-    const encadrants = await fetchWithAuth(`/projects/${projectId}/relation?relationType=encadrants`);
-    console.log(`${logPrefix}: Successfully fetched encadrants`, {
-      projectId,
-      encadrantCount: encadrants.relationData?.length || 0,
-    });
-    return encadrants;
+    console.debug(`${logPrefix}: Fetching encadrants`, { projectId });
+    const response = await fetchWithAuth(`/projects/${projectId}/team?relationType=members`);
+    console.debug(`${logPrefix}: Raw response`, { projectId, response });
+
+    return response.data.data;
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch encadrants`, {
       projectId,
       error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
     });
-    throw err;
+    return [];
   }
 };
 
@@ -144,7 +138,7 @@ export const getProjectJuryMembers = async (projectId: string): Promise<ProjectR
   const logPrefix = `[${new Date().toISOString()}] getProjectJuryMembers`;
   try {
     console.debug(`${logPrefix}: Fetching jury members`, { projectId });
-    const juryMembers = await fetchWithAuth(`/projects/${projectId}/relation?relationType=juryMembers`);
+    const juryMembers = await fetchWithAuth(`/projects/${projectId}/team?relationType=juryMembers`);
     console.debug(`${logPrefix}: Successfully fetched jury members`, {
       projectId,
       juryMemberCount: juryMembers.relationData?.length || 0,
@@ -257,6 +251,7 @@ export const addMemberToProject = async (projectId: string, userIdentifier: stri
       method: 'POST',
       body: JSON.stringify({ projectId, userIdentifier }),
     });
+    console.log("bbbbbbb")
     console.debug(`${logPrefix}: Successfully added member`, { projectId, userIdentifier });
     return result;
   } catch (err) {
@@ -277,6 +272,7 @@ export const addEncadrantToProject = async (projectId: string, userId: string) =
     const result = await fetchWithAuth(`/projects/${projectId}/add-encadrant/${userId}`, {
       method: 'POST',
     });
+    console.log("aaaaaa")
     console.debug(`${logPrefix}: Successfully added encadrant`, { projectId, userId });
     return result;
   } catch (err) {
@@ -310,10 +306,13 @@ export const addJuryMemberToProject = async (projectId: string, userId: string) 
   }
 };
 
-export const createSession = async (projectId: string, sessionData: Partial<Session>) => {
+export const createSession = async (projectId: string, sessionData: Partial<Session>): Promise<Session> => {
   const logPrefix = `[${new Date().toISOString()}] createSession`;
   try {
     console.debug(`${logPrefix}: Creating session for project`, { projectId, sessionData });
+    if (!sessionData.date ) {
+      throw new Error('Date and title are required');
+    }
     const session = await fetchWithAuth(`/projects/${projectId}/sessions`, {
       method: 'POST',
       body: JSON.stringify(sessionData),
@@ -330,15 +329,16 @@ export const createSession = async (projectId: string, sessionData: Partial<Sess
   }
 };
 
-export const getSessionById = async (sessionId: string): Promise<Session> => {
+export const getSessionById = async (projectId: string, sessionId: string): Promise<Session> => {
   const logPrefix = `[${new Date().toISOString()}] getSessionById`;
   try {
-    console.debug(`${logPrefix}: Fetching session`, { sessionId });
-    const session = await fetchWithAuth(`/sessions/${sessionId}`);
-    console.debug(`${logPrefix}: Successfully fetched session`, { sessionId });
+    console.debug(`${logPrefix}: Fetching session`, { projectId, sessionId });
+    const session = await fetchWithAuth(`/projects/${projectId}/sessions/${sessionId}`);
+    console.debug(`${logPrefix}: Successfully fetched session`, { projectId, sessionId });
     return session;
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch session`, {
+      projectId,
       sessionId,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
@@ -347,18 +347,19 @@ export const getSessionById = async (sessionId: string): Promise<Session> => {
   }
 };
 
-export const updateSession = async (sessionId: string, sessionData: Partial<Session>) => {
+export const updateSession = async (projectId: string, sessionId: string, sessionData: Partial<Session>): Promise<Session> => {
   const logPrefix = `[${new Date().toISOString()}] updateSession`;
   try {
-    console.debug(`${logPrefix}: Updating session`, { sessionId, sessionData });
-    const session = await fetchWithAuth(`/sessions/${sessionId}`, {
+    console.debug(`${logPrefix}: Updating session`, { projectId, sessionId, sessionData });
+    const session = await fetchWithAuth(`/projects/${projectId}/sessions/${sessionId}`, {
       method: 'PATCH',
       body: JSON.stringify(sessionData),
     });
-    console.debug(`${logPrefix}: Successfully updated session`, { sessionId });
+    console.debug(`${logPrefix}: Successfully updated session`, { projectId, sessionId });
     return session;
   } catch (err) {
     console.error(`${logPrefix}: Failed to update session`, {
+      projectId,
       sessionId,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
@@ -367,18 +368,96 @@ export const updateSession = async (sessionId: string, sessionData: Partial<Sess
   }
 };
 
-export const deleteSession = async (sessionId: string) => {
+export const deleteSession = async (projectId: string, sessionId: string): Promise<void> => {
   const logPrefix = `[${new Date().toISOString()}] deleteSession`;
   try {
-    console.debug(`${logPrefix}: Deleting session`, { sessionId });
-    const result = await fetchWithAuth(`/sessions/${sessionId}`, {
+    console.debug(`${logPrefix}: Deleting session`, { projectId, sessionId });
+    await fetchWithAuth(`/projects/${projectId}/sessions/${sessionId}`, {
       method: 'DELETE',
     });
-    console.debug(`${logPrefix}: Successfully deleted session`, { sessionId });
-    return result;
+    console.debug(`${logPrefix}: Successfully deleted session`, { projectId, sessionId });
   } catch (err) {
     console.error(`${logPrefix}: Failed to delete session`, {
+      projectId,
       sessionId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
+};
+
+export const updateAllModulesProgress = async (
+  projectId: string,
+  modulesProgress: {
+    research: number;
+    development: number;
+    testing: number;
+    documentation: number;
+  }
+): Promise<{ id: string; name: string; percentage: number; projectId: string; createdAt: string; updatedAt: string }[]> => {
+  const logPrefix = `[${new Date().toISOString()}] updateAllModulesProgress`;
+  try {
+    console.debug(`${logPrefix}: Updating all modules progress`, { projectId, modulesProgress });
+    Object.values(modulesProgress).forEach((percentage, index) => {
+      if (percentage < 0 || percentage > 100) {
+        throw new Error(`Invalid percentage for ${Object.keys(modulesProgress)[index]}: ${percentage}`);
+      }
+    });
+    const updatedModules = await fetchWithAuth(`/projects/${projectId}/all-modules`, {
+      method: 'PATCH',
+      body: JSON.stringify(modulesProgress),
+    });
+    console.debug(`${logPrefix}: Successfully updated modules progress`, { projectId, updatedModules });
+    return updatedModules;
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to update modules progress`, {
+      projectId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
+};
+
+export const updateSingleModuleProgress = async (
+  projectId: string,
+  moduleName: string,
+  percentage: number
+): Promise<{ id: string; name: string; percentage: number; projectId: string; createdAt: string; updatedAt: string }> => {
+  const logPrefix = `[${new Date().toISOString()}] updateSingleModuleProgress`;
+  try {
+    console.debug(`${logPrefix}: Updating single module progress`, { projectId, moduleName, percentage });
+    if (percentage < 0 || percentage > 100) {
+      throw new Error(`Invalid percentage for ${moduleName}: ${percentage}`);
+    }
+    const updatedModule = await fetchWithAuth(`/projects/${projectId}/modules`, {
+      method: 'PATCH',
+      body: JSON.stringify({ moduleName, percentage }),
+    });
+    console.debug(`${logPrefix}: Successfully updated module progress`, { projectId, moduleName, updatedModule });
+    return updatedModule;
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to update module progress`, {
+      projectId,
+      moduleName,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
+};
+
+export const getModulesProgress = async (projectId: string): Promise<{ id: string; name: string; percentage: number; projectId: string; createdAt: string; updatedAt: string }[]> => {
+  const logPrefix = `[${new Date().toISOString()}] getModulesProgress`;
+  try {
+    console.debug(`${logPrefix}: Fetching modules progress`, { projectId });
+    const modules = await fetchWithAuth(`/projects/${projectId}/modules`);
+    console.debug(`${logPrefix}: Successfully fetched modules progress`, { projectId, moduleCount: modules.length });
+    return modules;
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch modules progress`, {
+      projectId,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
     });
@@ -533,13 +612,13 @@ export const deleteFeedback = async (sessionId: string, feedbackId: string) => {
     throw err;
   }
 };
-export const getWorkshops = async (projectId?: string): Promise<Workshop[]> => {
+
+export const getWorkshops = async (): Promise<Workshop[]> => {
   const logPrefix = `[${new Date().toISOString()}] getWorkshops`;
   try {
-    console.log(`${logPrefix}: Fetching workshops`, { projectId });
-    const query = projectId ? `?projectId=${projectId}` : "";
-    const workshops = await fetchWithAuth(`/projects/workshops${query}`);
-    console.log(`${logPrefix}: Successfully fetched workshops`, { workshopCount: workshops.length });
+    console.debug(`${logPrefix}: Fetching workshops`);
+    const workshops = await fetchWithAuth(`/workshops`);
+    console.debug(`${logPrefix}: Successfully fetched workshops`, { workshopCount: workshops.length });
     return workshops || [];
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch workshops`, {
@@ -550,21 +629,42 @@ export const getWorkshops = async (projectId?: string): Promise<Workshop[]> => {
   }
 };
 
-export const getPastWorkshops = async (projectId?: string): Promise<Workshop[]> => {
-  const logPrefix = `[${new Date().toISOString()}] getPastWorkshops`;
+
+export const updateProject = async (projectId: string, projectData: Partial<Project>): Promise<Project> => {
+  const logPrefix = `[${new Date().toISOString()}] updateProject`;
   try {
-    console.log(`${logPrefix}: Fetching past workshops`, { projectId });
-    const query = projectId ? `?projectId=${projectId}` : "";
-    const workshops = await fetchWithAuth(`/workshops/past${query}`);
-    console.log(`${logPrefix}: Successfully fetched past workshops`, { workshopCount: workshops.length });
-    return workshops || [];
+    console.debug(`${logPrefix}: Updating project`, { projectId, projectData });
+    const project = await fetchWithAuth(`/projects/${projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(projectData),
+    });
+    console.debug(`${logPrefix}: Successfully updated project`, { projectId });
+    return project;
   } catch (err) {
-    console.error(`${logPrefix}: Failed to fetch past workshops`, {
+    console.error(`${logPrefix}: Failed to update project`, {
+      projectId,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
     });
-    return [];
+    throw err;
   }
 };
 
+export const deleteProject = async (projectId: string): Promise<void> => {
+  const logPrefix = `[${new Date().toISOString()}] deleteProject`;
+  try {
+    console.debug(`${logPrefix}: Deleting project`, { projectId });
+    await fetchWithAuth(`/projects/${projectId}`, {
+      method: 'DELETE',
+    });
+    console.debug(`${logPrefix}: Successfully deleted project`, { projectId });
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to delete project`, {
+      projectId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
+};
 export type { Session };
