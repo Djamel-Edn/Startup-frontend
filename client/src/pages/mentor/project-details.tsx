@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   makeStyles, 
@@ -331,28 +331,28 @@ const staticDeliverables: Deliverable[] = [
     title: "Prototype",
     description: "Is the MVP of your product?",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "",
   },
   {
     title: "Demo Video",
     description: "A demo video to showcase the features and working of your product",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "",
   },
   {
     title: "Pitch Deck",
     description: "A slides presentation to pitch your project at Demo Day.",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "",
   },
   {
     title: "Scaling",
     description: "Upload your file before the deadline to submit for review",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "",
   },
 ];
@@ -372,6 +372,7 @@ const ProjectDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [newFeedback, setNewFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [moduleProgress, setModuleProgress] = useState<number[]>([]); // Changed to array
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -381,18 +382,20 @@ const ProjectDetail = () => {
       try {
         const projectDetails = await getProjectById(projectId);
         const modules = await getModulesProgress(projectId);
-        const moduleMap: { [key: string]: number } = {};
-        modules.forEach(m => {
-          moduleMap[m.name] = m.percentage;
+        console.log("Modules Progress:", modules);
+        const moduleProgressArray: number[] = [];
+        modules.forEach((m) => {
+          moduleProgressArray.push(m.percentage); // Populate array
         });
+        setModuleProgress(moduleProgressArray); // Store module percentage
+
         const initialDeliverables = staticDeliverables.map((d, i) => {
-          const moduleName = ["research", "development", "testing", "documentation"][i];
-          const progress = moduleMap[moduleName] || 0;
+          const percentage = moduleProgressArray[i] ?? 0; // Use array index
           return {
             ...d,
-            progress,
-            status: progress === 0 ? "not started" : progress === 100 ? "done" : "in progress",
-            change: progress > 0 ? "+10%" : "",
+            percentage,
+            status: percentage === 0 ? "not started" : percentage === 100 ? "done" : "in percentage",
+            change: percentage > 0 ? "+10%" : "",
           };
         });
 
@@ -402,61 +405,62 @@ const ProjectDetail = () => {
           date: s.date,
           feedback: s.feedback || "",
           summary: s.summary || "",
-          module1: s.module1 || moduleMap["research"]?.toString() || "0",
-          module2: s.module2 || moduleMap["development"]?.toString() || "0",
-          module3: s.module3 || moduleMap["testing"]?.toString() || "0",
-          module4: s.module4 || moduleMap["documentation"]?.toString() || "0",
+          module1: s.module1 || (moduleProgressArray[0]?.toString() ?? "0"),
+          module2: s.module2 || (moduleProgressArray[1]?.toString() ?? "0"),
+          module3: s.module3 || (moduleProgressArray[2]?.toString() ?? "0"),
+          module4: s.module4 || (moduleProgressArray[3]?.toString() ?? "0"),
         }));
 
         const globalProgress = initialDeliverables.length > 0
-          ? Math.round(initialDeliverables.reduce((sum, d) => sum + d.progress, 0) / initialDeliverables.length)
+          ? Math.round(initialDeliverables.reduce((sum, d) => sum + d.percentage, 0) / initialDeliverables.length)
           : 0;
 
         const projectData: Project = {
           ...projectDetails,
           id: projectId,
-          name: projectDetails.name || "Project Name",
-          progress: {
-            id: `progress-${projectId}`,
+          name: projectDetails?.name || "Project Name",
+          percentage: { // Fixed to percentage
+            id: `percentage-${projectId}`,
             name: "Progress",
             globalProgress,
             sessions: mappedSessions,
           },
-          industry: projectDetails.industry || "",
-          about: projectDetails.about || "",
-          problem: projectDetails.problem || "",
-          solution: projectDetails.solution || "",
-          idea: projectDetails.idea || "",
-          targetAudience: projectDetails.targetAudience || "",
-          competitiveAdvantage: projectDetails.competitiveAdvantage || "",
-          motivation: projectDetails.motivation || "",
-          status: projectDetails.status || "",
-          stage: projectDetails.stage || "",
-          createdAt: projectDetails.createdAt || "",
+          industry: projectDetails?.industry || "",
+          about: projectDetails?.about || "",
+          problem: projectDetails?.problem || "",
+          solution: projectDetails?.solution || "",
+          idea: projectDetails?.idea || "",
+          targetAudience: projectDetails?.targetAudience || "",
+          competitiveAdvantage: projectDetails?.competitiveAdvantage || "",
+          motivation: projectDetails?.motivation || "",
+          status: projectDetails?.status || "",
+          stage: projectDetails?.stage || "",
+          createdAt: projectDetails?.createdAt || "",
         };
 
         setProject(projectData);
         setTempDeliverables(mappedSessions.length > 0
           ? staticDeliverables.map((d, i) => ({
               ...d,
-              progress: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) || 0,
+              percentage: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) || 0,
               status: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) === 0
                 ? "not started"
                 : parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) === 100
                 ? "done"
-                : "in progress",
+                : "in percentage",
               change: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) > 0 ? "+10%" : "",
             }))
           : initialDeliverables
         );
-        setSelectedSessionIndex(mappedSessions.length > 0 ? 0 : 0); // Reset to first session
+        setSelectedSessionIndex(mappedSessions.length > 0 ? 0 : 0);
       } catch (error) {
         console.error("Error fetching project:", error);
         setError("Project not loaded.");
         setProject(null);
+        setModuleProgress([]);
         setTempDeliverables(staticDeliverables.map(d => ({
           ...d,
-          progress: 0,
+          percentage: 0,
           status: "not started",
           change: "",
         })));
@@ -472,16 +476,16 @@ const ProjectDetail = () => {
 
   const handleSessionClick = (index: number) => {
     setSelectedSessionIndex(index);
-    if (project && project.progress.sessions[index]) {
-      const session = project.progress.sessions[index];
+    if (project && project.percentage.sessions[index]) {
+      const session = project.percentage.sessions[index];
       setTempDeliverables(staticDeliverables.map((d, i) => ({
         ...d,
-        progress: parseInt(session[`module${i + 1}` as keyof Session] as string) || 0,
+        percentage: parseInt(session[`module${i + 1}` as keyof Session] as string) || 0,
         status: parseInt(session[`module${i + 1}` as keyof Session] as string) === 0
           ? "not started"
           : parseInt(session[`module${i + 1}` as keyof Session] as string) === 100
           ? "done"
-          : "in progress",
+          : "in percentage",
         change: parseInt(session[`module${i + 1}` as keyof Session] as string) > 0 ? "+10%" : "",
       })));
     }
@@ -491,39 +495,39 @@ const ProjectDetail = () => {
     if (editMode && project && projectId) {
       try {
         const modulesProgress = {
-          research: tempDeliverables[0].progress,
-          development: tempDeliverables[1].progress,
-          testing: tempDeliverables[2].progress,
-          documentation: tempDeliverables[3].progress,
+          research: tempDeliverables[0].percentage, // Assuming API expects these names
+          development: tempDeliverables[1].percentage,
+          testing: tempDeliverables[2].percentage,
+          documentation: tempDeliverables[3].percentage,
         };
         await updateAllModulesProgress(projectId, modulesProgress);
 
-        const updatedSessions = [...project.progress.sessions];
+        const updatedSessions = [...project.percentage.sessions];
         if (updatedSessions[selectedSessionIndex]) {
           updatedSessions[selectedSessionIndex] = {
             ...updatedSessions[selectedSessionIndex],
-            module1: tempDeliverables[0].progress.toString(),
-            module2: tempDeliverables[1].progress.toString(),
-            module3: tempDeliverables[2].progress.toString(),
-            module4: tempDeliverables[3].progress.toString(),
+            module1: tempDeliverables[0].percentage.toString(),
+            module2: tempDeliverables[1].percentage.toString(),
+            module3: tempDeliverables[2].percentage.toString(),
+            module4: tempDeliverables[3].percentage.toString(),
           };
         }
 
-        const moduleProgress = tempDeliverables.map(d => d.progress);
-        const totalProgress = moduleProgress.reduce((sum, p) => sum + p, 0);
-        const globalProgress = moduleProgress.length > 0 ? Math.round(totalProgress / moduleProgress.length) : 0;
+        const moduleProgressValues = tempDeliverables.map(d => d.percentage);
+        const totalProgress = moduleProgressValues.reduce((sum, p) => sum + p, 0);
+        const globalProgress = moduleProgressValues.length > 0 ? Math.round(totalProgress / moduleProgressValues.length) : 0;
 
         setProject({
           ...project,
-          progress: {
-            ...project.progress,
+          percentage: {
+            ...project.percentage,
             globalProgress,
             sessions: updatedSessions,
           },
         });
       } catch (error) {
-        console.error("Error updating module progress:", error);
-        setError("Failed to save progress. Please try again.");
+        console.error("Error updating module percentage:", error);
+        setError("Failed to save percentage. Please try again.");
       }
     }
     setEditMode(!editMode);
@@ -532,24 +536,28 @@ const ProjectDetail = () => {
   const handleIncrementProgress = (deliverableIndex: number) => {
     if (!editMode) return;
     const updatedDeliverables = [...tempDeliverables];
-    const currentProgress = updatedDeliverables[deliverableIndex].progress;
+    const currentProgress = updatedDeliverables[deliverableIndex].percentage;
     const newProgress = Math.min(currentProgress + 10, 100);
     updatedDeliverables[deliverableIndex] = {
       ...updatedDeliverables[deliverableIndex],
-      progress: newProgress,
+      percentage: newProgress,
       change: "+10%",
-      status: newProgress === 0 ? "not started" : newProgress === 100 ? "done" : "in progress",
+      status: newProgress === 0 ? "not started" : newProgress === 100 ? "done" : "in percentage",
     };
     setTempDeliverables(updatedDeliverables);
+    // Update moduleProgress array
+    const newModuleProgress = [...moduleProgress];
+    newModuleProgress[deliverableIndex] = newProgress;
+    setModuleProgress(newModuleProgress);
   };
 
   const handleAddFeedback = async () => {
-    if (!project || !project.progress.sessions[selectedSessionIndex] || !newFeedback.trim()) {
+    if (!project || !project.percentage.sessions[selectedSessionIndex] || !newFeedback.trim()) {
       setFeedbackError("Feedback cannot be empty.");
       return;
     }
     try {
-      const sessionId = project.progress.sessions[selectedSessionIndex].id;
+      const sessionId = project.percentage.sessions[selectedSessionIndex].id;
       const feedbackData: Partial<Feedback> = { text: newFeedback };
       await addFeedback(sessionId, feedbackData);
       setRefreshTrigger(prev => prev + 1);
@@ -564,23 +572,22 @@ const ProjectDetail = () => {
   const getStatusBadgeClass = (status: string) =>
     ({
       "not started": styles.statusBadgeNotStarted,
-      "in progress": styles.statusBadgeInProgress,
+      "in percentage": styles.statusBadgeInProgress, // Fixed status
       done: styles.statusBadgeDone,
     }[status] || "");
 
   const getStatusText = (status: string) =>
     ({
       "not started": "Not started",
-      "in progress": "In progress",
+      "in percentage": "In percentage", // Fixed status
       done: "Done",
     }[status] || status);
 
   const handleSessionCreated = (newSessionId: string) => {
     setRefreshTrigger((prev) => prev + 1);
-    // After refresh, select the new session
     setTimeout(() => {
-      if (project?.progress.sessions) {
-        const newSessionIndex = project.progress.sessions.findIndex(s => s.id === newSessionId);
+      if (project?.percentage.sessions) {
+        const newSessionIndex = project.percentage.sessions.findIndex(s => s.id === newSessionId);
         if (newSessionIndex !== -1) {
           setSelectedSessionIndex(newSessionIndex);
           handleSessionClick(newSessionIndex);
@@ -632,7 +639,7 @@ const ProjectDetail = () => {
         <div className={styles.projectHeaderTop}>
           <h1 className={styles.projectTitle}>Project Progress</h1>
           <div className={styles.progressContainer}>
-            <span className={styles.progressPercentage}>{project?.progress.globalProgress || 0}%</span>
+            <span className={styles.progressPercentage}>{project?.percentage.globalProgress || 0}%</span>
             <span className={styles.progressChange}>+10%</span>
           </div>
         </div>
@@ -663,19 +670,26 @@ const ProjectDetail = () => {
         <div className={styles.sessionsPanel}>
           <div className={styles.sessionsPanelHeader}>
             <h2 className={styles.sessionsPanelTitle}>
-              Sessions {project?.progress?.sessions?.length && project.progress.sessions.length > 0 ? `(${project.progress.sessions.length})` : "(0)"}
+              Sessions {project?.percentage.sessions?.length && project.percentage.sessions.length > 0 ? `(${project.percentage.sessions.length})` : "(0)"}
             </h2>
-            <CreateSessionModal projectId={projectId || ""} onSessionCreated={handleSessionCreated} />
+            <CreateSessionModal
+              projectId={projectId || ""}
+              onSessionCreated={handleSessionCreated}
+            />
           </div>
-          {project?.progress.sessions && project.progress.sessions.length > 0 ? (
+          {project?.percentage.sessions && project.percentage.sessions.length > 0 ? (
             <div className={styles.sessionsList}>
-              {project.progress.sessions.map((session, index) => (
+              {project.percentage.sessions.map((session, index) => (
                 <div
                   key={session.id}
                   className={`${styles.sessionItem} ${index === selectedSessionIndex ? styles.sessionItemActive : ""}`}
                   onClick={() => handleSessionClick(index)}
                 >
-                  <span className={styles.sessionDate}>{session.date}</span>
+                  <span className={styles.sessionDate}>
+                    {typeof session.date === "object" && session.date !== null && "toISOString" in session.date
+                      ? (session.date as Date).toISOString().split("T")[0]
+                      : session.date}
+                  </span>
                   <ChevronRight20Regular />
                 </div>
               ))}
@@ -685,7 +699,7 @@ const ProjectDetail = () => {
               <CalendarLtr20Regular className={styles.noSessionsIcon} />
               <h3 className={styles.noSessionsTitle}>No Sessions Yet</h3>
               <p className={styles.noSessionsText}>
-                Create a new session to track progress.
+                Create a new session to track percentage.
               </p>
             </div>
           )}
@@ -710,7 +724,7 @@ const ProjectDetail = () => {
                   ) : (
                     <Comment20Regular />
                   )}
-                  <span>Feedbacks ({project?.progress.sessions[selectedSessionIndex]?.feedback ? 1 : 0})</span>
+                  <span>Feedbacks ({project?.percentage.sessions[selectedSessionIndex]?.feedback ? 1 : 0})</span>
                 </div>
               </Tab>
             </TabList>
@@ -741,12 +755,12 @@ const ProjectDetail = () => {
                             className={styles.progressPercentageSmall}
                             style={{
                               color:
-                                deliverable.progress === 100
+                                moduleProgress[index] === 100
                                   ? tokens.colorStatusSuccessForeground1
                                   : tokens.colorBrandForeground1,
                             }}
                           >
-                            {deliverable.progress}%
+                            {moduleProgress[index] ?? 0}%
                           </span>
                           {editMode && (
                             <div className={styles.incrementButton} onClick={() => handleIncrementProgress(index)}>
@@ -775,9 +789,9 @@ const ProjectDetail = () => {
             )}
             {activeTab === "feedbacks" && (
               <div className={styles.feedbacksContent}>
-                {project?.progress.sessions[selectedSessionIndex]?.feedback ? (
+                {project?.percentage.sessions[selectedSessionIndex]?.feedback ? (
                   <div className={styles.feedbackItem}>
-                    <p>{project.progress.sessions[selectedSessionIndex].feedback}</p>
+                    <p>{project.percentage.sessions[selectedSessionIndex].feedback}</p>
                   </div>
                 ) : (
                   <div className={styles.noFeedbacks}>
@@ -788,7 +802,7 @@ const ProjectDetail = () => {
                     </p>
                   </div>
                 )}
-                {project?.progress.sessions[selectedSessionIndex]?.id && (
+                {project?.percentage.sessions[selectedSessionIndex]?.id && (
                   <div className={styles.feedbackForm}>
                     <Textarea
                       value={newFeedback}

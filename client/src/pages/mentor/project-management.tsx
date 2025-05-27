@@ -221,9 +221,9 @@ const ProjectsManagement = () => {
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       (statusFilter === "status" ||
-        (statusFilter === "in-progress" && project.progress.globalProgress > 0 && project.progress.globalProgress < 100) ||
-        (statusFilter === "completed" && project.progress.globalProgress === 100) ||
-        (statusFilter === "not-started" && project.progress.globalProgress === 0))
+        (statusFilter === "in-percentage" && project.percentage.globalProgress > 0 && project.percentage.globalProgress < 100) ||
+        (statusFilter === "completed" && project.percentage.globalProgress === 100) ||
+        (statusFilter === "not-started" && project.percentage.globalProgress === 0))
   );
 
   return (
@@ -252,7 +252,7 @@ const ProjectsManagement = () => {
             placeholder="Status"
           >
             <Option value="status">Status</Option>
-            <Option value="in-progress">In Progress</Option>
+            <Option value="in-percentage">In Progress</Option>
             <Option value="completed">Completed</Option>
             <Option value="not-started">Not Started</Option>
           </Dropdown>
@@ -267,7 +267,7 @@ const ProjectsManagement = () => {
               id: project.id,
               name: project.name,
               description: "",
-              progress: typeof project.progress === "number" ? project.progress : project.progress?.globalProgress ?? 0,
+              progress: typeof project.percentage === "number" ? project.percentage : project.percentage?.globalProgress ?? 0,
               teamMembers: project.members
                 ? project.members.map((member: any) => ({
                     id: member.id,

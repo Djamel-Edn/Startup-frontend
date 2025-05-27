@@ -2,7 +2,7 @@ export interface Deliverable {
   title: string;
   description: string;
   status: string;
-  progress: number;
+  percentage: number;
   change: string;
 }
 
@@ -13,7 +13,7 @@ export interface Feedback {
 
 export interface Session {
   id: string;
-  date: Date;
+  date: string;
   feedback: string;
   summary: string;
   module1:String;
@@ -63,7 +63,7 @@ export interface Project {
   encadrants?: ProjectMember[];
   juryMembers?: ProjectMember[];
   teamId: string;
-  progress: ProjectProgress;
+  percentage: ProjectProgress;
 }
 
 export interface Workshop{

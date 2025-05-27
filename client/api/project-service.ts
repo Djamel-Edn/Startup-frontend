@@ -459,7 +459,7 @@ export const getModulesProgress = async (projectId: string): Promise<{ id: strin
   } catch (err) {
     console.error(`${logPrefix}: Failed to fetch modules progress`, {
       projectId,
-      error: err instanceof Error ? err.message : String(err),
+      error: err instanceof Error ? err.message : String(err),  
       stack: err instanceof Error ? err.stack : undefined,
     });
     throw err;

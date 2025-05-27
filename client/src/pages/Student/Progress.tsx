@@ -25,6 +25,7 @@ import {
   ErrorCircleRegular,
 } from "@fluentui/react-icons";
 import {
+  getModulesProgress,
   getProjectById,
   getProjectSessions,
   type Session,
@@ -213,6 +214,16 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "4px",
   },
+  doneBadge: {
+    backgroundColor: tokens.colorStatusSuccessBackground1,
+    border: `1px solid ${tokens.colorStatusSuccessForeground1}`,
+    color: tokens.colorStatusSuccessForeground1,
+  },
+  inProgressBadge: {
+    backgroundColor: tokens.colorBrandBackground2,
+    border: `1px solid ${tokens.colorBrandStroke1}`,
+    color: tokens.colorBrandForeground1,
+  },
   progressInfo: {
     display: "flex",
     flexDirection: "column",
@@ -370,34 +381,37 @@ const defaultDeliverables: Deliverable[] = [
     title: "Prototype",
     description: "Is the MVP of your product?",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "+0%",
   },
   {
     title: "Demo Video",
     description: "A demo video to showcase the features and working of your product",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "+0%",
   },
   {
     title: "Pitch Deck",
     description: "A slides presentation to pitch your project at Demo Day.",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "+0%",
   },
   {
     title: "Deliverable name",
     description: "Upload your file before the deadline to submit for review",
     status: "not started",
-    progress: 0,
+    percentage: 0,
     change: "+0%",
   },
 ];
-
-
-
+const titleToModuleNameMap: { [key: string]: string } = {
+  "Prototype": "Research",
+  "Demo Video": "Development",
+  "Pitch Deck": "Testing",
+  "Scaling": "Documentation"
+};
 const Progress = () => {
   const styles = useStyles();
   const [activeTab, setActiveTab] = useState("deliverables");
@@ -407,44 +421,65 @@ const Progress = () => {
   const [projectName, setProjectName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const {user}=useAuthContext()
-  const projectId=user?.projectId
+  const [moduleProgress, setModuleProgress] = useState<number[]>([]); // Store module percentages
+  const { user } = useAuthContext();
+  const projectId = user?.projectId;
 
   const fetchProjectData = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    if (!projectId || projectId === "undefined") {
-      throw new Error("Invalid project ID");
+      if (!projectId || projectId === "undefined") {
+        throw new Error("Invalid project ID");
+      }
+
+      console.log(`[${new Date().toISOString()}] fetchProjectData: Fetching data for project`, { projectId });
+
+      // Fetch project
+      const projectData = await getProjectById(projectId).catch((err) => {
+        console.warn(`[${new Date().toISOString()}] fetchProjectData: Project endpoint error`, { projectId, err });
+        return null;
+      });
+      setProjectName(projectData?.name || "Project");
+
+      // Fetch sessions
+      const sessionsData = await getProjectSessions(projectId).catch((err) => {
+        console.warn(`[${new Date().toISOString()}] fetchProjectData: Sessions endpoint error`, { projectId, err });
+        return [];
+      });
+
+      // Fetch module progress
+      const modulesData = await getModulesProgress(projectId).catch((err) => {
+        console.warn(`[${new Date().toISOString()}] fetchProjectData: Modules endpoint error`, { projectId, err });
+        return [];
+      });
+      console.log(modulesData, "modulesData");
+      const moduleProgressArray = defaultDeliverables.map((deliverable) => {
+  const moduleName = titleToModuleNameMap[deliverable.title];
+  return modulesData.find(m => m.name === moduleName)?.percentage ?? 0;
+});
+      console.log(moduleProgressArray, "moduleProgressArray");
+      setModuleProgress(moduleProgressArray);
+
+      // Add module progress to sessions
+      const enrichedSessions = sessionsData.map((session: Session) => ({
+        ...session,
+        module1: session.module1 || moduleProgressArray[0]?.toString() || "0",
+        module2: session.module2 || moduleProgressArray[1]?.toString() || "0",
+        module3: session.module3 || moduleProgressArray[2]?.toString() || "0",
+        module4: session.module4 || moduleProgressArray[3]?.toString() || "0",
+      }));
+      setSessions(enrichedSessions);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load project data";
+      console.error(`[${new Date().toISOString()}] fetchProjectData: Critical error`, { projectId, error: errorMessage });
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    console.log(`[${new Date().toISOString()}] fetchProjectData: Fetching data for project`, { projectId });
-
-    // Fetch project
-    const projectData = await getProjectById(projectId).catch((err) => {
-      console.warn(`[${new Date().toISOString()}] fetchProjectData: Project endpoint error`, { projectId, err });
-      return null;
-    });
-    setProjectName(projectData?.name || "Project");
-
-    // Fetch sessions
-    const sessionsData = await getProjectSessions(projectId).catch((err) => {
-      console.warn(`[${new Date().toISOString()}] fetchProjectData: Sessions endpoint error`, { projectId, err });
-      return [];
-    });
-    setSessions(sessionsData);
-
- 
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Failed to load project data";
-    console.error(`[${new Date().toISOString()}] fetchProjectData: Critical error`, { projectId, error: errorMessage });
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
   useEffect(() => {
     fetchProjectData();
   }, [projectId]);
@@ -474,30 +509,34 @@ const Progress = () => {
   const calculateGlobalProgress = () => {
     if (sessions.length === 0) return 0;
 
-    let totalProgress = 0;
-    let totalDeliverables = 0;
+    const currentSession = sessions.find(s => s.id === selectedSessionId);
+    if (!currentSession) return 0;
 
-    
+    const moduleProgresses = [
+      parseInt(String(currentSession.module1 || "0")),
+      parseInt(String(currentSession.module2 || "0")),
+      parseInt(String(currentSession.module3 || "0")),
+      parseInt(String(currentSession.module4 || "0")),
+    ];
 
-    return totalDeliverables > 0 ? Math.round(totalProgress / totalDeliverables) : 0;
+    const totalProgress = moduleProgresses.reduce((sum, p) => sum + p, 0);
+    return moduleProgresses.length > 0 ? Math.round(totalProgress / moduleProgresses.length) : 0;
   };
 
   const globalProgress = calculateGlobalProgress();
-  const currentStep = globalProgress; 
-
   const hasNoSessions = sessions.length === 0;
   const currentSession = hasNoSessions ? null : sessions.find((session) => session.id === selectedSessionId) || null;
-  const currentFeedback=  hasNoSessions
-    ? ""
+  const currentFeedback = hasNoSessions
+    ? []
     : Array.isArray(currentSession?.feedback)
-      ? currentSession?.feedback
+      ? currentSession.feedback
       : currentSession?.feedback
         ? [currentSession.feedback]
         : [];
-  const totalDeliverables = defaultDeliverables.length
+  const totalDeliverables = defaultDeliverables.length;
   const totalFeedbacks = hasNoSessions
     ? 0
-    : sessions.reduce((total, session) => total +  0, 0);
+    : sessions.reduce((total, session) => total + (session.feedback ? 1 : 0), 0);
 
   if (loading) {
     return (
@@ -526,7 +565,7 @@ const Progress = () => {
         </div>
         <div className={styles.progressSection}>
           <ProgressBar
-            value={0.5 / 100}
+            value={globalProgress / 100}
             thickness="large"
             className={styles.globalProgressBar}
           />
@@ -559,10 +598,7 @@ const Progress = () => {
 
               <div className={styles.deliverablesSection}>
                 <div className={styles.tabContainer}>
-                  <TabList
-                    selectedValue={activeTab} 
-                    onTabSelect={handleTabChange}
-                  >
+                  <TabList selectedValue={activeTab} onTabSelect={handleTabChange}>
                     <Tab value="deliverables">
                       <div className={styles.statItem}>
                         {activeTab === "deliverables" ? (
@@ -593,24 +629,38 @@ const Progress = () => {
                         <div className={styles.deliverableInfo}>
                           <div className={styles.deliverableHeader}>
                             <h3 className={styles.deliverableName}>{item.title}</h3>
-                            <div className={styles.notStartedBadge}>Not started</div>
+                            <div className={`${styles.notStartedBadge} ${
+                              moduleProgress[index] === 0 ? styles.notStartedBadge :
+                              moduleProgress[index] === 100 ? styles.doneBadge : styles.inProgressBadge
+                            }`}>
+                              {moduleProgress[index] === 0 ? "Not started" :
+                               moduleProgress[index] === 100 ? "Done" : "In progress"}
+                            </div>
                           </div>
                           <p className={styles.deliverableSubtext}>{item.description}</p>
                         </div>
                         <div className={styles.progressInfo}>
-                          <span className={styles.progressPercentageSmall}>{item.progress}%</span>
-                          <span className={styles.progressChange}>{item.change}</span>
+                          <span
+                            className={styles.progressPercentageSmall}
+                            style={{
+                              color: moduleProgress[index] === 100
+                                ? tokens.colorStatusSuccessForeground1
+                                : tokens.colorBrandForeground1,
+                            }}
+                          >
+                            {moduleProgress[index] ?? 0}%
+                          </span>
+                          <span className={styles.progressChange}>
+                            {moduleProgress[index] > 0 ? `+${moduleProgress[index] - (parseInt(String(item.change)) || 0)}%` : item.change}
+                          </span>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className={styles.noFeedback}>
-                      <div className={styles.noFeedbackIcon}>
-                        <CommentDismiss24Regular />
-                      </div>
                       <h3 className={styles.noFeedbackTitle}>No Feedbacks Yet</h3>
                       <p className={styles.noFeedbackText}>
-                        Once you submit your deliverable, your mentor will review it and leave feedback
+                        Once you submit your deliverable, your mentor will review it and leave feedback.
                       </p>
                     </div>
                   )}
@@ -623,20 +673,25 @@ const Progress = () => {
                 <h2 className={styles.sessionHeader}>
                   Sessions <span className={styles.sessionCount}>({sessions.length})</span>
                 </h2>
-                {sessions.map((session, index) => (
+                {sessions.map((session) => (
                   <div
-                    key={index}
+                    key={session.id}
                     className={styles.sessionItem}
                     onClick={() => handleSessionClick(session.id)}
                     style={{
                       borderLeft: selectedSessionId === session.id ? `3px solid ${tokens.colorBrandBackground}` : "none",
                     }}
                   >
-                    <span className={styles.sessionDate}>{session.date || "No date available"}</span>
+                    <span className={styles.sessionDate}>
+                      {session.date && typeof session.date === "object" && Object.prototype.toString.call(session.date) === "[object Date]"
+                        ? (session.date as Date).toISOString().split("T")[0]
+                        : typeof session.date === "string"
+                          ? session.date
+                          : "No date available"}
+                    </span>
                     <ChevronRightRegular />
                   </div>
                 ))}
-
                 <div className={styles.pagination}>
                   <div className={styles.paginationItem}>{"<"}</div>
                   <div className={`${styles.paginationItem} ${styles.paginationItemActive}`}>1</div>
@@ -646,10 +701,7 @@ const Progress = () => {
 
               <div className={styles.deliverablesSection}>
                 <div className={styles.tabContainer}>
-                  <TabList
-                    selectedValue={activeTab} 
-                    onTabSelect={handleTabChange}
-                  >
+                  <TabList selectedValue={activeTab} onTabSelect={handleTabChange}>
                     <Tab value="deliverables">
                       <div className={styles.statItem}>
                         {activeTab === "deliverables" ? (
@@ -674,20 +726,45 @@ const Progress = () => {
                 </div>
 
                 {activeTab === "deliverables" ? (
-                  <>
-                   
-                     
-                      <div className={styles.noFeedback}>
-                        <div className={styles.noFeedbackIcon}>
-                          <Folder20Filled />
+                  <div className={styles.defaultDeliverablesList}>
+                    {defaultDeliverables.map((item, index) => {
+                      const sessionProgress = currentSession
+                        ? parseInt(String(currentSession[`module${index + 1}` as keyof Session] ?? "0")) || 0
+                        : moduleProgress[index] ?? 0;
+                      return (
+                        <div key={index} className={styles.deliverableCard}>
+                          <div className={styles.deliverableInfo}>
+                            <div className={styles.deliverableHeader}>
+                              <h3 className={styles.deliverableName}>{item.title}</h3>
+                              <div className={`${styles.notStartedBadge} ${
+                                sessionProgress === 0 ? styles.notStartedBadge :
+                                sessionProgress === 100 ? styles.doneBadge : styles.inProgressBadge
+                              }`}>
+                                {sessionProgress === 0 ? "Not started" :
+                                 sessionProgress === 100 ? "Done" : "In progress"}
+                              </div>
+                            </div>
+                            <p className={styles.deliverableSubtext}>{item.description}</p>
+                          </div>
+                          <div className={styles.progressInfo}>
+                            <span
+                              className={styles.progressPercentageSmall}
+                              style={{
+                                color: sessionProgress === 100
+                                  ? tokens.colorStatusSuccessForeground1
+                                  : tokens.colorBrandForeground1,
+                              }}
+                            >
+                              {sessionProgress}%
+                            </span>
+                            <span className={styles.progressChange}>
+                              {sessionProgress > 0 ? `+${sessionProgress - (parseInt(String(item.change)) || 0)}%` : item.change}
+                            </span>
+                          </div>
                         </div>
-                        <h3 className={styles.noFeedbackTitle}>No Deliverables Yet</h3>
-                        <p className={styles.noFeedbackText}>
-                          This session doesn't have any deliverables assigned yet.
-                        </p>
-                      </div>
-                    
-                  </>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <>
                     <div className={styles.actionsContainer}>
@@ -695,15 +772,21 @@ const Progress = () => {
                         <AddFeedbackModal sessionId={currentSession.id} onFeedbackAdded={handleFeedbackAdded} />
                       )}
                     </div>
-                     <div className={styles.noFeedback}>
-                        <div className={styles.noFeedbackIcon}>
-                          <CommentDismiss24Regular />
+                    {currentFeedback.length > 0 ? (
+                      currentFeedback.map((feedback, index) => (
+                        <div key={index} className={styles.feedbackText}>
+                          <p>{feedback}</p>
                         </div>
+                      ))
+                    ) : (
+                      <div className={styles.noFeedback}>
+                       
                         <h3 className={styles.noFeedbackTitle}>No Feedbacks Yet</h3>
                         <p className={styles.noFeedbackText}>
-                          Once you submit your deliverable, your mentor will review it and leave feedback
+                          Once you submit your deliverable, your mentor will review it and leave feedback.
                         </p>
                       </div>
+                    )}
                   </>
                 )}
               </div>

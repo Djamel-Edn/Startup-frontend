@@ -197,8 +197,8 @@ const Login: React.FC = () => {
         if (user.projectId) {
           dest = "/progress";
         }else{
-          dest = hasSeenPrompt ? "/progress" : "/startup";
 
+          dest = hasSeenPrompt ? "/progress" : "/startup";
         }
 
       }
