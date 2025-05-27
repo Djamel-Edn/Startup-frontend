@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Logo Image.svg';
 import { useTheme } from "../ThemeContext"
+import { useAuthContext } from './components/AuthContext';
 const useStyles = makeStyles({
   background: {
     backgroundColor: tokens.colorNeutralBackground2,
@@ -135,8 +136,8 @@ const Otp: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const email = location.state?.email || 'your.email@esi-sba.dz';
+  const {user} =useAuthContext()
+  const email = localStorage.getItem('email') ||user?.email || 'your.email@esi-sba.dz';
 
   const handleChange = (
     index: number,

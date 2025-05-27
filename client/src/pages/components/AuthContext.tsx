@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
   setLoading(true);
   try {
-    if (email=== 'admin@gmail.com' && password === 'admin') {
+    if (email=== 'admin@esi-sba.dz' && password === 'admin') {
       const adminUser: User = {
         name: 'Admin User',
         email: "admin@gmail.com",

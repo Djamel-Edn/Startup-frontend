@@ -585,6 +585,8 @@ const Application: React.FC = () => {
 
       const data = await response.json()
       setCreatedProject(data)
+      localStorage.setItem("projectId", data.id)
+      localStorage.setItem("projectRole", data.role || "OWNER")
       setStep(7)
     } catch (error) {
       if (error instanceof Error) {

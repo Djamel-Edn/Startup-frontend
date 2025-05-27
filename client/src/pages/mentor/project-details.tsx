@@ -9,7 +9,8 @@ import {
   TabList, 
   Tab, 
   type SelectTabEventHandler, 
-  tokens 
+  tokens, 
+  Textarea
 } from "@fluentui/react-components";
 import {
   ChevronRight20Regular,
@@ -23,8 +24,9 @@ import {
   Add16Filled,
 } from "@fluentui/react-icons";
 import { useAuthContext } from "../components/AuthContext";
-import { Deliverable, Project } from "../../../types";
+import { Deliverable, Feedback, Project, Session } from "../../../types";
 import CreateSessionModal from "../components/create-session-modal";
+import { addFeedback, getModulesProgress, getProjectById, getProjectSessions, updateAllModulesProgress } from "../../../api/project-service";
 
 const useStyles = makeStyles({
   container: {
@@ -49,7 +51,7 @@ const useStyles = makeStyles({
   breadcrumbCurrent: { color: tokens.colorNeutralForeground1 },
   projectHeader: {
     backgroundColor: tokens.colorNeutralBackground1,
-    padding: "20px 24px",
+    padding: "10px 20px",
     borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: "8px",
     boxShadow: "0 1px 1px rgba(0, 0, 0, 1)",
@@ -97,7 +99,7 @@ const useStyles = makeStyles({
   },
   mainArea: { flex: 1, display: "flex", overflow: "hidden" },
   sessionsPanel: {
-    width: "280px",
+    width: "450px",
     display: "flex",
     flexDirection: "column",
     padding: "0 24px",
@@ -280,7 +282,80 @@ const useStyles = makeStyles({
     gap: "16px",
   },
   unauthorizedText: { fontSize: "16px", color: tokens.colorNeutralForeground1 },
+  feedbacksContent: {
+    padding: "24px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  noDeliverables: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 20px",
+    textAlign: "center",
+    gap: "16px",
+    flex: 1,
+  },
+  noFeedbacks: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 20px",
+    textAlign: "center",
+    gap: "16px",
+    flex: 1,
+  },
+  feedbackItem: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: "8px",
+    padding: "16px",
+    fontSize: "16px",
+    color: tokens.colorNeutralForeground1,
+    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  },
+  feedbackForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginTop: "8px",
+  },
 });
+
+
+
+const staticDeliverables: Deliverable[] = [
+  {
+    title: "Prototype",
+    description: "Is the MVP of your product?",
+    status: "not started",
+    progress: 0,
+    change: "",
+  },
+  {
+    title: "Demo Video",
+    description: "A demo video to showcase the features and working of your product",
+    status: "not started",
+    progress: 0,
+    change: "",
+  },
+  {
+    title: "Pitch Deck",
+    description: "A slides presentation to pitch your project at Demo Day.",
+    status: "not started",
+    progress: 0,
+    change: "",
+  },
+  {
+    title: "Deliverable name",
+    description: "Upload your file before the deadline to submit for review",
+    status: "not started",
+    progress: 0,
+    change: "",
+  },
+];
 
 const ProjectDetail = () => {
   const styles = useStyles();
@@ -289,128 +364,299 @@ const ProjectDetail = () => {
   const { user, loading: isLoading } = useAuthContext();
   const [project, setProject] = useState<Project | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("deliverables"); 
+  const [activeTab, setActiveTab] = useState("deliverables");
   const [selectedSessionIndex, setSelectedSessionIndex] = useState(0);
   const [editMode, setEditMode] = useState(false);
-  const [tempDeliverables, setTempDeliverables] = useState<Deliverable[]>([]);
+  const [tempDeliverables, setTempDeliverables] = useState<Deliverable[]>(staticDeliverables);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  useEffect(() => {
-    if (!isLoading && user && user.role !== "SUPERVISOR") navigate("/dashboard");
-  }, [user, isLoading, navigate]);
+  const [error, setError] = useState<string | null>(null);
+  const [newFeedback, setNewFeedback] = useState("");
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
+      if (!projectId || !user) return;
+      setProjectLoading(true);
+      setError(null);
       try {
-        setTimeout(() => {
-          const isCompleted = projectId === "1";
-          let mockProject: Project = isCompleted
-            ? {
-                id: projectId || "1",
-                name: "Project Name",
-                teamId: "Team ID",
-                progress: {
-                  id: "progress1",
-                  name: "Progress",
-                  globalProgress: 100,
-                  sessions: [
-                    { id: "1", date: "March 3, 2025",  deliverables: [{ title: "Deliverable name", description: "Upload your file before the deadline to submit for review", status: "done", progress: 100, change: "" }, { title: "Pitch Deck", description: "A slides presentation to pitch your project at Demo Day.", status: "done", progress: 100, change: "" }, { title: "Prototype", description: "Is the MVP of your product?", status: "done", progress: 100, change: "" }, { title: "Demo Video", description: "A demo video to showcase the features and working of your product", status: "done", progress: 100, change: "" }], feedbacks: [] },
-                    { id: "2", date: "March 10, 2025",  deliverables: [], feedbacks: [] },
-                    { id: "3", date: "March 17, 2025",  deliverables: [], feedbacks: [] },
-                    { id: "4", date: "March 24, 2025",  deliverables: [], feedbacks: [] },
-                    { id: "5", date: "March 31, 2025",  deliverables: [], feedbacks: [] },
-                    { id: "6", date: "April 7, 2025",  deliverables: [], feedbacks: [] },
-                    { id: "7", date: "May 5, 2025",  deliverables: [], feedbacks: [] },
-                  ],
-                },
-                industry: "", about: "", problem: "", solution: "", idea: "", targetAudience: "", competitiveAdvantage: "", motivation: "", status: "", stage: "", createdAt: "",
-              }
-            : { id: projectId || "3", name: "Project Name", teamId: "Team ID", progress: { id: "progress3", name: "Progress", globalProgress: 0, sessions: [] }, industry: "", about: "", problem: "", solution: "", idea: "", targetAudience: "", competitiveAdvantage: "", motivation: "", status: "", stage: "", createdAt: "" };
-          setProject(mockProject);
-          setProjectLoading(false);
-        }, 1000);
+        const projectDetails = await getProjectById(projectId);
+        const modules = await getModulesProgress(projectId);
+        const moduleMap: { [key: string]: number } = {};
+        modules.forEach(m => {
+          moduleMap[m.name] = m.percentage;
+        });
+        const initialDeliverables = staticDeliverables.map((d, i) => {
+          const moduleName = ["research", "development", "testing", "documentation"][i];
+          const progress = moduleMap[moduleName] || 0;
+          return {
+            ...d,
+            progress,
+            status: progress === 0 ? "not started" : progress === 100 ? "done" : "in progress",
+            change: progress > 0 ? "+10%" : "",
+          };
+        });
+
+        const sessions = await getProjectSessions(projectId);
+        const mappedSessions = sessions.map(s => ({
+          id: s.id,
+          date: s.date,
+          feedback: s.feedback || "",
+          summary: s.summary || "",
+          module1: s.module1 || moduleMap["research"]?.toString() || "0",
+          module2: s.module2 || moduleMap["development"]?.toString() || "0",
+          module3: s.module3 || moduleMap["testing"]?.toString() || "0",
+          module4: s.module4 || moduleMap["documentation"]?.toString() || "0",
+        }));
+
+        const globalProgress = initialDeliverables.length > 0
+          ? Math.round(initialDeliverables.reduce((sum, d) => sum + d.progress, 0) / initialDeliverables.length)
+          : 0;
+
+        const projectData: Project = {
+          ...projectDetails,
+          id: projectId,
+          name: projectDetails.name || "Project Name",
+          progress: {
+            id: `progress-${projectId}`,
+            name: "Progress",
+            globalProgress,
+            sessions: mappedSessions,
+          },
+          industry: projectDetails.industry || "",
+          about: projectDetails.about || "",
+          problem: projectDetails.problem || "",
+          solution: projectDetails.solution || "",
+          idea: projectDetails.idea || "",
+          targetAudience: projectDetails.targetAudience || "",
+          competitiveAdvantage: projectDetails.competitiveAdvantage || "",
+          motivation: projectDetails.motivation || "",
+          status: projectDetails.status || "",
+          stage: projectDetails.stage || "",
+          createdAt: projectDetails.createdAt || "",
+        };
+
+        setProject(projectData);
+        setTempDeliverables(mappedSessions.length > 0
+          ? staticDeliverables.map((d, i) => ({
+              ...d,
+              progress: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) || 0,
+              status: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) === 0
+                ? "not started"
+                : parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) === 100
+                ? "done"
+                : "in progress",
+              change: parseInt(mappedSessions[0][`module${i + 1}` as keyof Session] as string) > 0 ? "+10%" : "",
+            }))
+          : initialDeliverables
+        );
       } catch (error) {
         console.error("Error fetching project:", error);
+        setError("Project not loaded.");
+        setProject(null);
+        setTempDeliverables(staticDeliverables.map(d => ({
+          ...d,
+          progress: 0,
+          status: "not started",
+          change: "",
+        })));
+      } finally {
         setProjectLoading(false);
       }
     };
-    if (projectId) fetchProject();
-  }, [projectId, refreshTrigger]);
+
+    if (projectId && user) fetchProject();
+  }, [projectId, user, refreshTrigger]);
 
   const handleTabChange: SelectTabEventHandler = (_, data) => setActiveTab(data.value as string);
-  const handleSessionClick = (index: number) => setSelectedSessionIndex(index);
-  const handleEditToggle = () => {
-    if (editMode && project && project.progress.sessions[selectedSessionIndex]) {
-      const updatedSessions = [...project.progress.sessions];
-      updatedSessions[selectedSessionIndex] = { ...updatedSessions[selectedSessionIndex], deliverables: tempDeliverables };
-      let totalProgress = 0, totalDeliverables = 0;
-      updatedSessions.forEach(session => session.deliverables.forEach(deliverable => { totalProgress += deliverable.progress; totalDeliverables++ }));
-      const newProgress = totalDeliverables > 0 ? Math.round(totalProgress / totalDeliverables) : 0;
-      setProject({ ...project, progress: { ...project.progress, globalProgress: newProgress, sessions: updatedSessions } });
-    } else if (project && project.progress.sessions[selectedSessionIndex]) {
-      setTempDeliverables([...project.progress.sessions[selectedSessionIndex].deliverables]);
+
+  const handleSessionClick = (index: number) => {
+    setSelectedSessionIndex(index);
+    if (project && project.progress.sessions[index]) {
+      const session = project.progress.sessions[index];
+      setTempDeliverables(staticDeliverables.map((d, i) => ({
+        ...d,
+        progress: parseInt(session[`module${i + 1}` as keyof Session] as string) || 0,
+        status: parseInt(session[`module${i + 1}` as keyof Session] as string) === 0
+          ? "not started"
+          : parseInt(session[`module${i + 1}` as keyof Session] as string) === 100
+          ? "done"
+          : "in progress",
+        change: parseInt(session[`module${i + 1}` as keyof Session] as string) > 0 ? "+10%" : "",
+      })));
+    }
+  };
+
+  const handleEditToggle = async () => {
+    if (editMode && project && projectId) {
+      try {
+        const modulesProgress = {
+          research: tempDeliverables[0].progress,
+          development: tempDeliverables[1].progress,
+          testing: tempDeliverables[2].progress,
+          documentation: tempDeliverables[3].progress,
+        };
+        await updateAllModulesProgress(projectId, modulesProgress);
+
+        const updatedSessions = [...project.progress.sessions];
+        if (updatedSessions[selectedSessionIndex]) {
+          updatedSessions[selectedSessionIndex] = {
+            ...updatedSessions[selectedSessionIndex],
+            module1: tempDeliverables[0].progress.toString(),
+            module2: tempDeliverables[1].progress.toString(),
+            module3: tempDeliverables[2].progress.toString(),
+            module4: tempDeliverables[3].progress.toString(),
+          };
+        }
+
+        const moduleProgress = tempDeliverables.map(d => d.progress);
+        const totalProgress = moduleProgress.reduce((sum, p) => sum + p, 0);
+        const globalProgress = moduleProgress.length > 0 ? Math.round(totalProgress / moduleProgress.length) : 0;
+
+        setProject({
+          ...project,
+          progress: {
+            ...project.progress,
+            globalProgress,
+            sessions: updatedSessions,
+          },
+        });
+      } catch (error) {
+        console.error("Error updating module progress:", error);
+        setError("Failed to save progress. Please try again.");
+      }
     }
     setEditMode(!editMode);
   };
+
   const handleIncrementProgress = (deliverableIndex: number) => {
     if (!editMode) return;
     const updatedDeliverables = [...tempDeliverables];
     const currentProgress = updatedDeliverables[deliverableIndex].progress;
     const newProgress = Math.min(currentProgress + 10, 100);
-    updatedDeliverables[deliverableIndex] = { ...updatedDeliverables[deliverableIndex], progress: newProgress, change: "+10%", status: newProgress === 0 ? "not started" : newProgress === 100 ? "done" : "in progress" };
+    updatedDeliverables[deliverableIndex] = {
+      ...updatedDeliverables[deliverableIndex],
+      progress: newProgress,
+      change: "+10%",
+      status: newProgress === 0 ? "not started" : newProgress === 100 ? "done" : "in progress",
+    };
     setTempDeliverables(updatedDeliverables);
   };
 
-  const getStatusBadgeClass = (status: string) => ({ "not started": styles.statusBadgeNotStarted, "in progress": styles.statusBadgeInProgress, "done": styles.statusBadgeDone }[status] || "");
-  const getStatusText = (status: string) => ({ "not started": "Not started", "in progress": "In progress", "done": "Done" }[status] || status);
-
-  if (!isLoading && user && user.role !== "SUPERVISOR") return (
-    <div className={styles.unauthorizedContainer}>
-      <h2 className={styles.unauthorizedText}>You don't have permission to access this page.</h2>
-      <Button appearance="primary" onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
-    </div>
-  );
-  if (projectLoading || isLoading || !project) return (
-    <div className={styles.loadingContainer}><Spinner size="large" label="Loading project details..." /></div>
-  );
-
-  const currentSession = project.progress.sessions[selectedSessionIndex] || { deliverables: [], feedbacks: [] };
-  const deliverablesToDisplay = editMode ? tempDeliverables : currentSession.deliverables;
-
-  const handleSessionCreated = () => {
-    setRefreshTrigger(prev => prev + 1);
+  const handleAddFeedback = async () => {
+    if (!project || !project.progress.sessions[selectedSessionIndex] || !newFeedback.trim()) {
+      setFeedbackError("Feedback cannot be empty.");
+      return;
+    }
+    try {
+      const sessionId = project.progress.sessions[selectedSessionIndex].id;
+      const feedbackData: Partial<Feedback> = { text: newFeedback };
+      await addFeedback(sessionId, feedbackData);
+      setRefreshTrigger(prev => prev + 1);
+      setNewFeedback("");
+      setFeedbackError(null);
+    } catch (error) {
+      console.error("Error adding feedback:", error);
+      setFeedbackError("Failed to add feedback. Please try again.");
+    }
   };
+
+  const getStatusBadgeClass = (status: string) =>
+    ({
+      "not started": styles.statusBadgeNotStarted,
+      "in progress": styles.statusBadgeInProgress,
+      done: styles.statusBadgeDone,
+    }[status] || "");
+
+  const getStatusText = (status: string) =>
+    ({
+      "not started": "Not started",
+      "in progress": "In progress",
+      done: "Done",
+    }[status] || status);
+
+  const handleSessionCreated = async () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  if (!isLoading && !user) {
+    return (
+      <div className={styles.unauthorizedContainer}>
+        <h2 className={styles.unauthorizedText}>Please log in to access this page.</h2>
+        <Button appearance="primary" onClick={() => navigate("/login")}>
+          Log In
+        </Button>
+      </div>
+    );
+  }
+
+  if (!isLoading && user && user.role !== "SUPERVISOR") {
+    return (
+      <div className={styles.unauthorizedContainer}>
+        <h2 className={styles.unauthorizedText}>You don't have permission to access this page.</h2>
+        <Button appearance="primary" onClick={() => navigate("/dashboard")}>
+          Go to Dashboard
+        </Button>
+      </div>
+    );
+  }
+
+  if (projectLoading || isLoading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <Spinner size="large" label="Loading project details..." />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.breadcrumb}>
-        <Link to="/mentor/projects-management" className={styles.breadcrumbLink}>Projects Management</Link>
+        <Link to="/mentor/projects-management" className={styles.breadcrumbLink}>
+          Projects Management
+        </Link>
         <ChevronRight20Regular />
-        <span className={styles.breadcrumbCurrent}>{project.name}</span>
+        <span className={styles.breadcrumbCurrent}>{project?.name || "Project Name"}</span>
       </div>
       <div className={styles.projectHeader}>
         <div className={styles.projectHeaderTop}>
           <h1 className={styles.projectTitle}>Project Progress</h1>
           <div className={styles.progressContainer}>
-            <span className={styles.progressPercentage}>{project.progress.globalProgress}%</span>
+            <span className={styles.progressPercentage}>{project?.progress.globalProgress || 0}%</span>
             <span className={styles.progressChange}>+10%</span>
           </div>
         </div>
+        {error && (
+          <div style={{ color: tokens.colorStatusDangerForeground1, marginTop: "8px" }}>
+            {error}
+          </div>
+        )}
         <div className={styles.projectInfo}>
-          <div className={styles.projectInfoItem}><DocumentRegular /><span>{project.name}</span></div>
-          <div className={styles.projectInfoItem}><PeopleRegular /><span>{project.teamId}</span></div>
+          <div className={styles.projectInfoItem}>
+            <DocumentRegular />
+            <span>{project?.name || "Project Name"}</span>
+          </div>
+          <div className={styles.projectInfoItem}>
+            <PeopleRegular />
+            <span>{project?.teamId || "N/A"}</span>
+          </div>
         </div>
       </div>
       <div className={styles.mainArea}>
         <div className={styles.sessionsPanel}>
           <div className={styles.sessionsPanelHeader}>
-            <h2 className={styles.sessionsPanelTitle}>Sessions {project.progress.sessions.length > 0 && `(${project.progress.sessions.length})`}</h2>
+            <h2 className={styles.sessionsPanelTitle}>
+              Sessions {project?.progress?.sessions && project.progress.sessions.length > 0 ? `(${project.progress.sessions.length})` : "(0)"}
+            </h2>
             <CreateSessionModal projectId={projectId || ""} onSessionCreated={handleSessionCreated} />
           </div>
-          {project.progress.sessions.length > 0 ? (
+          {project?.progress.sessions && project.progress.sessions.length > 0 ? (
             <div className={styles.sessionsList}>
               {project.progress.sessions.map((session, index) => (
-                <div key={session.id} className={`${styles.sessionItem} ${index === selectedSessionIndex ? styles.sessionItemActive : ""}`} onClick={() => handleSessionClick(index)}>
+                <div
+                  key={session.id}
+                  className={`${styles.sessionItem} ${index === selectedSessionIndex ? styles.sessionItemActive : ""}`}
+                  onClick={() => handleSessionClick(index)}
+                >
                   <span className={styles.sessionDate}>{session.date}</span>
                   <ChevronRight20Regular />
                 </div>
@@ -420,7 +666,9 @@ const ProjectDetail = () => {
             <div className={styles.noSessions}>
               <CalendarLtr20Regular className={styles.noSessionsIcon} />
               <h3 className={styles.noSessionsTitle}>No Sessions Yet</h3>
-              <p className={styles.noSessionsText}>When your mentor submits a new progress report, you can see it here.</p>
+              <p className={styles.noSessionsText}>
+                Create a new session to track progress.
+              </p>
             </div>
           )}
         </div>
@@ -429,40 +677,117 @@ const ProjectDetail = () => {
             <TabList selectedValue={activeTab} onTabSelect={handleTabChange}>
               <Tab value="deliverables">
                 <div className={styles.tabContent}>
-                  {activeTab === "deliverables" ? <Folder20Filled style={{ color: tokens.colorBrandForeground1 }} /> : <Folder20Regular />}
-                  <span>Deliverables ({currentSession.deliverables.length})</span>
+                  {activeTab === "deliverables" ? (
+                    <Folder20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                  ) : (
+                    <Folder20Regular />
+                  )}
+                  <span>Deliverables ({tempDeliverables.length})</span>
                 </div>
               </Tab>
               <Tab value="feedbacks">
                 <div className={styles.tabContent}>
-                  {activeTab === "feedbacks" ? <Comment20Filled style={{ color: tokens.colorBrandForeground1 }} /> : <Comment20Regular />}
-                  <span>Feedbacks ({currentSession.feedbacks.length})</span>
+                  {activeTab === "feedbacks" ? (
+                    <Comment20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                  ) : (
+                    <Comment20Regular />
+                  )}
+                  <span>Feedbacks ({project?.progress.sessions[selectedSessionIndex]?.feedback ? 1 : 0})</span>
                 </div>
               </Tab>
             </TabList>
-            {project.progress.sessions.length > 0 && <Button className={editMode ? styles.saveButton : styles.updateButton} onClick={handleEditToggle}>{editMode ? "Save Changes" : "Update Progress"}</Button>}
+            {activeTab === "deliverables" && (
+              <Button className={editMode ? styles.saveButton : styles.updateButton} onClick={handleEditToggle}>
+                {editMode ? "Save Changes" : "Update Progress"}
+              </Button>
+            )}
           </div>
           <div className={styles.deliverablesContent}>
             {activeTab === "deliverables" && (
-              <div className={styles.deliverablesList}>
-                {deliverablesToDisplay.map((deliverable, index) => (
-                  <div key={deliverable.title} className={styles.deliverableItem}>
-                    <div className={styles.deliverableInfo}>
-                      <div className={styles.deliverableHeader}>
-                        <h3 className={styles.deliverableTitle}>{deliverable.title}</h3>
-                        <span className={`${styles.statusBadge} ${getStatusBadgeClass(deliverable.status)}`}>{getStatusText(deliverable.status)}</span>
+              tempDeliverables.length > 0 ? (
+                <div className={styles.deliverablesList}>
+                  {tempDeliverables.map((deliverable, index) => (
+                    <div key={deliverable.title} className={styles.deliverableItem}>
+                      <div className={styles.deliverableInfo}>
+                        <div className={styles.deliverableHeader}>
+                          <h3 className={styles.deliverableTitle}>{deliverable.title}</h3>
+                          <span className={`${styles.statusBadge} ${getStatusBadgeClass(deliverable.status)}`}>
+                            {getStatusText(deliverable.status)}
+                          </span>
+                        </div>
+                        <p className={styles.deliverableDescription}>{deliverable.description}</p>
                       </div>
-                      <p className={styles.deliverableDescription}>{deliverable.description}</p>
-                    </div>
-                    <div className={styles.progressInfo}>
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        <span className={styles.progressPercentageSmall} style={{ color: deliverable.progress === 100 ? tokens.colorStatusSuccessForeground1 : tokens.colorBrandForeground1 }}>{deliverable.progress}%</span>
-                        {editMode && <div className={styles.incrementButton} onClick={() => handleIncrementProgress(index)}><Add16Filled /></div>}
+                      <div className={styles.progressInfo}>
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <span
+                            className={styles.progressPercentageSmall}
+                            style={{
+                              color:
+                                deliverable.progress === 100
+                                  ? tokens.colorStatusSuccessForeground1
+                                  : tokens.colorBrandForeground1,
+                            }}
+                          >
+                            {deliverable.progress}%
+                          </span>
+                          {editMode && (
+                            <div className={styles.incrementButton} onClick={() => handleIncrementProgress(index)}>
+                              <Add16Filled />
+                            </div>
+                          )}
+                        </div>
+                        {deliverable.change && (
+                          <span className={styles.progressChange} style={{ color: tokens.colorStatusSuccessForeground1 }}>
+                            {deliverable.change}
+                          </span>
+                        )}
                       </div>
-                      {deliverable.change && <span className={styles.progressChange} style={{ color: tokens.colorStatusSuccessForeground1 }}>{deliverable.change}</span>}
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.noDeliverables}>
+                  <Folder20Regular className={styles.noSessionsIcon} />
+                  <h3 className={styles.noSessionsTitle}>No Deliverables Yet</h3>
+                  <p className={styles.noSessionsText}>
+                    No deliverables have been added to this project.
+                  </p>
+                </div>
+              )
+            )}
+            {activeTab === "feedbacks" && (
+              <div className={styles.feedbacksContent}>
+                {project?.progress.sessions[selectedSessionIndex]?.feedback ? (
+                  <div className={styles.feedbackItem}>
+                    <p>{project.progress.sessions[selectedSessionIndex].feedback}</p>
                   </div>
-                ))}
+                ) : (
+                  <div className={styles.noFeedbacks}>
+                    <Comment20Regular className={styles.noSessionsIcon} />
+                    <h3 className={styles.noSessionsTitle}>No Feedback Yet</h3>
+                    <p className={styles.noSessionsText}>
+                      No feedback has been provided for this session.
+                    </p>
+                  </div>
+                )}
+                {project?.progress.sessions[selectedSessionIndex]?.id && (
+                  <div className={styles.feedbackForm}>
+                    <Textarea
+                      value={newFeedback}
+                      onChange={(e) => setNewFeedback(e.target.value)}
+                      placeholder="Enter your feedback..."
+                      style={{ width: "100%", marginBottom: "10px" }}
+                    />
+                    {feedbackError && (
+                      <p style={{ color: tokens.colorStatusDangerForeground1, marginBottom: "10px" }}>
+                        {feedbackError}
+                      </p>
+                    )}
+                    <Button appearance="primary" onClick={handleAddFeedback}>
+                      Submit Feedback
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

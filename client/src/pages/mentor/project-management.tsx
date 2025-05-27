@@ -6,6 +6,8 @@ import { makeStyles, tokens, Input, Button, Dropdown, Option, Spinner } from "@f
 import { SearchRegular } from "@fluentui/react-icons"
 import { useAuthContext } from "../components/AuthContext"
 import { ProjectCard } from "../components/ProjectCard" 
+import { Project } from "types"
+import { fetchAllProjects } from "../../../api/project-service"
 
 const useStyles = makeStyles({
   container: {
@@ -122,147 +124,70 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground1,
   },
 })
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  progress: number
-  teamMembers: { id: string; name: string; avatar?: string }[]
-  mentors: { id: string; name: string; avatar?: string }[]
-}
-
 const ProjectsManagement = () => {
-  const styles = useStyles()
-  const navigate = useNavigate()
-  const { user, loading } = useAuthContext()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [projectsLoading, setProjectsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("status")
+  const styles = useStyles();
+  const navigate = useNavigate();
+  const { user, loading } = useAuthContext();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("status");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (loading && user && user.role !== "SUPERVISOR") {
-      navigate("/dashboard")
+ 
+
+ useEffect(() => {
+  const fetchProjects = async () => {
+    if (!user) return;
+    setProjectsLoading(true);
+    setError(null);
+    try {
+      const allProjects = await fetchAllProjects();
+      console.log("ooooo", allProjects);
+      const filteredProjects = allProjects.filter(project =>
+        project.members?.some(member => member.id === user.id)
+      );
+      console.log("Filtered Projects:", filteredProjects);
+      setProjects(filteredProjects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setError("Failed to load projects. Please try again.");
+    } finally {
+      setProjectsLoading(false);
     }
-  }, [user, loading, navigate])
+  };
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setTimeout(() => {
-          const mockProjects: Project[] = [
-            {
-              id: "1",
-              name: "Project Alpha",
-              description: "AI-powered diagnostic assistant aiming to improve medical decision-making in rural clinics",
-              progress: 10,
-              teamMembers: [
-                { id: "1", name: "John Doe", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Jane Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "3", name: "Bob Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "4", name: "Alice Brown", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-              mentors: [
-                { id: "1", name: "Dr. Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Prof. Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-            },
-            {
-              id: "2",
-              name: "Project Beta",
-              description: "AI-powered diagnostic assistant aiming to improve medical decision-making in rural clinics",
-              progress: 50,
-              teamMembers: [
-                { id: "1", name: "John Doe", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Jane Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "3", name: "Bob Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "4", name: "Alice Brown", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-              mentors: [
-                { id: "1", name: "Dr. Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Prof. Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-            },
-            {
-              id: "3",
-              name: "Project Gamma",
-              description: "AI-powered diagnostic assistant aiming to improve medical decision-making in rural clinics",
-              progress: 100,
-              teamMembers: [
-                { id: "1", name: "John Doe", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Jane Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "3", name: "Bob Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "4", name: "Alice Brown", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-              mentors: [
-                { id: "1", name: "Dr. Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Prof. Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-            },
-            {
-              id: "4",
-              name: "Project Delta",
-              description: "AI-powered diagnostic assistant aiming to improve medical decision-making in rural clinics",
-              progress: 0,
-              teamMembers: [
-                { id: "1", name: "John Doe", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Jane Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "3", name: "Bob Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "4", name: "Alice Brown", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-              mentors: [
-                { id: "1", name: "Dr. Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Prof. Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-            },
-            {
-              id: "5",
-              name: "Project Epsilon",
-              description: "AI-powered diagnostic assistant aiming to improve medical decision-making in rural clinics",
-              progress: 75,
-              teamMembers: [
-                { id: "1", name: "John Doe", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Jane Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "3", name: "Bob Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "4", name: "Alice Brown", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-              mentors: [
-                { id: "1", name: "Dr. Smith", avatar: "/placeholder.svg?height=24&width=24" },
-                { id: "2", name: "Prof. Johnson", avatar: "/placeholder.svg?height=24&width=24" },
-              ],
-            },
-          ]
-          setProjects(mockProjects)
-          setProjectsLoading(false)
-        }, 1000)
-      } catch (error) {
-        console.error("Error fetching projects:", error)
-        setProjectsLoading(false)
-      }
-    }
-
-    fetchProjects()
-  }, [])
+  fetchProjects();
+}, [user]);
 
   const handleProjectClick = (projectId: string | number) => {
-    navigate(`/mentor/projects/${projectId.toString()}`)
-  }
+    navigate(`/mentor/projects/${projectId.toString()}`);
+  };
 
   const handleEdit = (projectId: string | number) => {
-    console.log(`Editing project ${projectId}`)
-  }
+    console.log(`Editing project ${projectId}`);
+  };
 
   const handleDelete = (projectId: string | number) => {
-    console.log(`Deleting project ${projectId}`)
-  }
+    console.log(`Deleting project ${projectId}`);
+  };
 
   const handleDuplicate = (projectId: string | number) => {
-    console.log(`Duplicating project ${projectId}`)
-    // Implement duplicate logic here
+    console.log(`Duplicating project ${projectId}`);
+  };
+
+  if (!loading && !user) {
+    return (
+      <div className={styles.unauthorizedContainer}>
+        <h2 className={styles.unauthorizedText}>Please log in to access this page.</h2>
+        <Button appearance="primary" onClick={() => navigate("/login")}>
+          Log In
+        </Button>
+      </div>
+    );
   }
 
-  if (loading && user && user.role !== "SUPERVISOR") {
+  if (!loading && user && user.role !== "SUPERVISOR") {
     return (
       <div className={styles.unauthorizedContainer}>
         <h2 className={styles.unauthorizedText}>You don't have permission to access this page.</h2>
@@ -270,7 +195,7 @@ const ProjectsManagement = () => {
           Go to Dashboard
         </Button>
       </div>
-    )
+    );
   }
 
   if (projectsLoading) {
@@ -278,17 +203,28 @@ const ProjectsManagement = () => {
       <div className={styles.loadingContainer}>
         <Spinner size="large" label="Loading projects..." />
       </div>
-    )
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.unauthorizedContainer}>
+        <h2 className={styles.unauthorizedText}>{error}</h2>
+        <Button appearance="primary" onClick={() => setProjectsLoading(true)}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       (statusFilter === "status" ||
-        (statusFilter === "in-progress" && project.progress > 0 && project.progress < 100) ||
-        (statusFilter === "completed" && project.progress === 100) ||
-        (statusFilter === "not-started" && project.progress === 0)),
-  )
+        (statusFilter === "in-progress" && project.progress.globalProgress > 0 && project.progress.globalProgress < 100) ||
+        (statusFilter === "completed" && project.progress.globalProgress === 100) ||
+        (statusFilter === "not-started" && project.progress.globalProgress === 0))
+  );
 
   return (
     <div className={styles.container}>
@@ -327,7 +263,26 @@ const ProjectsManagement = () => {
         {filteredProjects.map((project) => (
           <ProjectCard
             key={project.id}
-            project={project}
+            project={{
+              id: project.id,
+              name: project.name,
+              description: "",
+              progress: typeof project.progress === "number" ? project.progress : project.progress?.globalProgress ?? 0,
+              teamMembers: project.members
+                ? project.members.map((member: any) => ({
+                    id: member.id,
+                    name: member.name,
+                    avatar: member.avatar,
+                  }))
+                : [],
+              mentors: project.encadrants
+                ? project.encadrants.map((encadrant: any) => ({
+                    id: encadrant.id,
+                    name: encadrant.name,
+                    avatar: encadrant.avatar,
+                  }))
+                : [],
+            }}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onDuplicate={handleDuplicate}
@@ -344,7 +299,7 @@ const ProjectsManagement = () => {
         <div className={styles.paginationItem}>{">"}</div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ProjectsManagement
+export default ProjectsManagement;

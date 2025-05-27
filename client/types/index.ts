@@ -14,7 +14,8 @@ export interface Feedback {
 export interface Session {
   id: string;
   date: string;
-  feedback: Feedback;
+  feedback: string;
+  summary: string;
   module1:String;
   module2:String;
   module3:String;
@@ -38,7 +39,6 @@ export interface ProjectMember {
 }
 
 export interface ProjectRelation {
-  data: any;
   projectId: string;
   relationType: string;
   relationData: ProjectMember[];

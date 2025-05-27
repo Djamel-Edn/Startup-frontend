@@ -44,7 +44,7 @@ const useStyles = makeStyles({
     flex: 1,
     display: 'flex',
     justifyContent: 'center',
-    marginRight: '8rem',
+    marginRight: '5rem',
   },
   input: {
     width: '100%',

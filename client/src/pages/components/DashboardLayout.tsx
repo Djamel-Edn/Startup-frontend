@@ -37,7 +37,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     overflow: "auto",
-    padding: "1rem",
+    padding: "2rem 1rem",
     boxSizing: "border-box", // Prevent padding overflow
   },
 });

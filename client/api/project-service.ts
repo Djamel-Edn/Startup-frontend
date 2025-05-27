@@ -251,7 +251,6 @@ export const addMemberToProject = async (projectId: string, userIdentifier: stri
       method: 'POST',
       body: JSON.stringify({ projectId, userIdentifier }),
     });
-    console.log("bbbbbbb")
     console.debug(`${logPrefix}: Successfully added member`, { projectId, userIdentifier });
     return result;
   } catch (err) {
@@ -268,9 +267,11 @@ export const addMemberToProject = async (projectId: string, userIdentifier: stri
 export const addEncadrantToProject = async (projectId: string, userId: string) => {
   const logPrefix = `[${new Date().toISOString()}] addEncadrantToProject`;
   try {
+    console.log(`${logPrefix}: Adding encadrant to project`, { projectId, userId });
     console.debug(`${logPrefix}: Adding encadrant to project`, { projectId, userId });
-    const result = await fetchWithAuth(`/projects/${projectId}/add-encadrant/${userId}`, {
+    const result = await fetchWithAuth(`/projects/${projectId}/add-encadrant`, {
       method: 'POST',
+      body: JSON.stringify(userId),
     });
     console.log("aaaaaa")
     console.debug(`${logPrefix}: Successfully added encadrant`, { projectId, userId });
@@ -465,92 +466,9 @@ export const getModulesProgress = async (projectId: string): Promise<{ id: strin
   }
 };
 
-export const addDeliverable = async (sessionId: string, deliverableData: Partial<Deliverable>) => {
-  const logPrefix = `[${new Date().toISOString()}] addDeliverable`;
-  try {
-    console.debug(`${logPrefix}: Adding deliverable to session`, { sessionId, deliverableData });
-    const deliverable = await fetchWithAuth(`/sessions/${sessionId}/deliverables`, {
-      method: 'POST',
-      body: JSON.stringify(deliverableData),
-    });
-    console.debug(`${logPrefix}: Successfully added deliverable`, { sessionId, deliverableId: deliverable.id });
-    return deliverable;
-  } catch (err) {
-    console.error(`${logPrefix}: Failed to add deliverable`, {
-      sessionId,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    throw err;
-  }
-};
 
-export const updateDeliverable = async (
-  sessionId: string,
-  deliverableId: string,
-  deliverableData: Partial<Deliverable>
-) => {
-  const logPrefix = `[${new Date().toISOString()}] updateDeliverable`;
-  try {
-    console.debug(`${logPrefix}: Updating deliverable`, { sessionId, deliverableId, deliverableData });
-    const deliverable = await fetchWithAuth(`/sessions/${sessionId}/deliverables/${deliverableId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(deliverableData),
-    });
-    console.debug(`${logPrefix}: Successfully updated deliverable`, { sessionId, deliverableId });
-    return deliverable;
-  } catch (err) {
-    console.error(`${logPrefix}: Failed to update deliverable`, {
-      sessionId,
-      deliverableId,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    throw err;
-  }
-};
 
-export const updateDeliverableProgress = async (sessionId: string, deliverableId: string, progress: number) => {
-  const logPrefix = `[${new Date().toISOString()}] updateDeliverableProgress`;
-  try {
-    console.debug(`${logPrefix}: Updating deliverable progress`, { sessionId, deliverableId, progress });
-    const result = await fetchWithAuth(`/sessions/${sessionId}/deliverables/${deliverableId}/progress`, {
-      method: 'PATCH',
-      body: JSON.stringify({ progress }),
-    });
-    console.debug(`${logPrefix}: Successfully updated deliverable progress`, { sessionId, deliverableId, progress });
-    return result;
-  } catch (err) {
-    console.error(`${logPrefix}: Failed to update deliverable progress`, {
-      sessionId,
-      deliverableId,
-      progress,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    throw err;
-  }
-};
 
-export const deleteDeliverable = async (sessionId: string, deliverableId: string) => {
-  const logPrefix = `[${new Date().toISOString()}] deleteDeliverable`;
-  try {
-    console.debug(`${logPrefix}: Deleting deliverable`, { sessionId, deliverableId });
-    const result = await fetchWithAuth(`/sessions/${sessionId}/deliverables/${deliverableId}`, {
-      method: 'DELETE',
-    });
-    console.debug(`${logPrefix}: Successfully deleted deliverable`, { sessionId, deliverableId });
-    return result;
-  } catch (err) {
-    console.error(`${logPrefix}: Failed to delete deliverable`, {
-      sessionId,
-      deliverableId,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    throw err;
-  }
-};
 
 export const addFeedback = async (sessionId: string, feedbackData: Partial<Feedback>) => {
   const logPrefix = `[${new Date().toISOString()}] addFeedback`;
@@ -661,6 +579,21 @@ export const deleteProject = async (projectId: string): Promise<void> => {
   } catch (err) {
     console.error(`${logPrefix}: Failed to delete project`, {
       projectId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
+};
+export const fetchAllProjects = async (): Promise<Project[]> => {
+  const logPrefix = `[${new Date().toISOString()}] fetchAllProjects`;
+  try {
+    console.debug(`${logPrefix}: Fetching all projects`);
+    const projects = await fetchWithAuth(`/projects`);
+    console.debug(`${logPrefix}: Successfully fetched projects`, { projectCount: projects.length });
+    return projects;
+  } catch (err) {
+    console.error(`${logPrefix}: Failed to fetch projects`, {
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
     });

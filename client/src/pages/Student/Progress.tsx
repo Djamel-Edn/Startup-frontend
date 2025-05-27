@@ -1,36 +1,44 @@
 "use client";
 
+import type React from "react";
 import { useState, useEffect } from "react";
 import {
   makeStyles,
   tokens,
   ProgressBar,
+  TabList,
+  Tab,
   Spinner,
+  SelectTabEventHandler,
   Text,
   Title2,
-  Button,
 } from "@fluentui/react-components";
 import {
   ChevronRightRegular,
+  DocumentRegular,
+  Folder20Filled,
+  Folder20Regular,
+  Comment20Filled,
+  Comment20Regular,
+  CommentDismiss24Regular,
   CalendarLtr20Regular,
   ErrorCircleRegular,
-  PeopleTeam24Regular,
-  CommentDismiss24Regular,
 } from "@fluentui/react-icons";
 import {
   getProjectById,
   getProjectSessions,
   type Session,
-  type Feedback,
 } from "../../../api/project-service";
+import AddFeedbackModal from "../components/add-feedback-modal";
+import type { Deliverable, Feedback } from "../../../types";
 import { useAuthContext } from "../components/AuthContext";
 
 const useStyles = makeStyles({
   layout: {
     display: "flex",
     flexDirection: "column",
-    minHeight: "100vh",
-    overflow: "hidden",
+    padding: "0",
+    margin: "0",
   },
   headerSection: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -87,12 +95,16 @@ const useStyles = makeStyles({
     left: 0,
     right: 0,
   },
+  progressText: {
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground2,
+    fontWeight: "500",
+  },
   contentWrapper: {
     display: "flex",
     flex: 1,
     backgroundColor: tokens.colorNeutralBackground2,
-    overflow: "hidden",
-  },
+    },
   mainContent: {
     flex: 1,
     display: "flex",
@@ -139,44 +151,88 @@ const useStyles = makeStyles({
     color: tokens.colorBrandForeground1,
     fontWeight: "500",
   },
-  modulesSection: {
+  deliverablesSection: {
     flex: "2 1 66%",
     display: "flex",
     flexDirection: "column",
     gap: "0.25rem",
     padding: "0 1rem",
   },
-  modulesList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1rem",
+  tabContainer: {
+    marginBottom: "0.5rem",
   },
-  moduleItem: {
+  deliverableCard: {
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: "8px",
-    padding: "1rem",
+    padding: "1rem 1.25rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "1rem",
+  },
+  deliverableInfo: {
+    flex: 1,
+  },
+  deliverableHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "0.5rem",
+  },
+  deliverableName: {
+    fontSize: tokens.fontSizeBase500,
+    fontWeight: "500",
+    color: tokens.colorNeutralForeground1,
+    margin: 0,
+  },
+  deliverableSubtext: {
+    fontSize: "14px",
+    color: tokens.colorNeutralForeground2,
+    margin: 0,
+    lineHeight: "1.5",
+  },
+  statusBadge: {
+    fontSize: "12px",
+    padding: "4px 12px",
+    borderRadius: "16px",
+    backgroundColor: "transparent",
+    border: `1px solid ${tokens.colorBrandStroke1}`,
+    color: tokens.colorBrandForeground1,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  notStartedBadge: {
+    fontSize: "12px",
+    padding: "4px 12px",
+    borderRadius: "16px",
+    backgroundColor: "transparent",
+    border: `1px solid ${tokens.colorNeutralForeground3}`,
+    color: tokens.colorNeutralForeground3,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  progressInfo: {
     display: "flex",
     flexDirection: "column",
+    alignItems: "flex-end",
     gap: "0.5rem",
   },
-  moduleName: {
-    fontSize: "14px",
+  progressPercentageSmall: {
+    fontSize: tokens.fontSizeBase600,
     fontWeight: "600",
-    color: tokens.colorNeutralForeground1,
-  },
-  moduleDescription: {
-    fontSize: "12px",
-    color: tokens.colorNeutralForeground2,
-  },
-  modulePercentage: {
-    fontSize: "14px",
     color: tokens.colorBrandForeground1,
+  },
+  progressChange: {
+    fontSize: "14px",
+    color: tokens.colorStatusSuccessForeground1,
   },
   feedbackCard: {
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: "8px",
     padding: "1rem 1.5rem",
-    marginTop: "1rem",
+    marginBottom: "1rem",
     display: "flex",
     alignItems: "center",
     gap: "1.5rem",
@@ -195,14 +251,43 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
     lineHeight: "1.5",
   },
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "1rem",
+    marginTop: "1rem",
+  },
+  paginationItem: {
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "14px",
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground3,
+    },
+  },
+  paginationItemActive: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  statItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    fontSize: "14px",
+  },
   noFeedback: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
-    padding: "2rem",
-    marginTop: "1rem",
+    padding: "4rem 2rem",
+    height: "100%",
   },
   noFeedbackIcon: {
     fontSize: "28px",
@@ -244,28 +329,11 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3,
     borderRadius: "8px",
   },
-  pagination: {
+  defaultDeliverablesList: {
     display: "flex",
-    justifyContent: "center",
+    flexDirection: "column",
     gap: "1rem",
-    marginTop: "1rem",
-  },
-  paginationItem: {
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "14px",
-    ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3,
-    },
-  },
-  paginationItemActive: {
-    backgroundColor: tokens.colorNeutralBackground3,
-    fontWeight: tokens.fontWeightSemibold,
+    width: "100%",
   },
   loadingContainer: {
     display: "flex",
@@ -290,117 +358,95 @@ const useStyles = makeStyles({
     fontSize: "40px",
     color: tokens.colorStatusDangerForeground1,
   },
-  noProjectContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    padding: "4rem 2rem",
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: "8px",
-    margin: "1.5rem auto",
-    width: "95%",
-    maxWidth: "600px",
-    boxShadow: tokens.shadow4,
-  },
-  noProjectIcon: {
-    fontSize: "32px",
-    color: tokens.colorNeutralForeground3,
-    marginBottom: "1rem",
-    width: "64px",
-    height: "64px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: tokens.colorNeutralBackground3,
-    borderRadius: "12px",
-  },
-  noProjectTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: tokens.colorNeutralForeground1,
-    marginBottom: "0.75rem",
-  },
-  noProjectMessage: {
-    fontSize: "14px",
-    color: tokens.colorNeutralForeground2,
-    maxWidth: "400px",
-    margin: "0 auto 1rem",
-    lineHeight: "1.6",
-  },
   actionsContainer: {
     display: "flex",
     gap: "1rem",
-    marginBottom: "1rem",
+    marginTop: "1.5rem",
   },
 });
 
-interface ModuleProgress {
-  id: string;
-  name: string;
-  description: string;
-  percentage: number;
-}
+const defaultDeliverables: Deliverable[] = [
+  {
+    title: "Prototype",
+    description: "Is the MVP of your product?",
+    status: "not started",
+    progress: 0,
+    change: "+0%",
+  },
+  {
+    title: "Demo Video",
+    description: "A demo video to showcase the features and working of your product",
+    status: "not started",
+    progress: 0,
+    change: "+0%",
+  },
+  {
+    title: "Pitch Deck",
+    description: "A slides presentation to pitch your project at Demo Day.",
+    status: "not started",
+    progress: 0,
+    change: "+0%",
+  },
+  {
+    title: "Deliverable name",
+    description: "Upload your file before the deadline to submit for review",
+    status: "not started",
+    progress: 0,
+    change: "+0%",
+  },
+];
+
+
 
 const Progress = () => {
   const styles = useStyles();
-  const { user } = useAuthContext();
-  const projectId = user?.projectId;
+  const [activeTab, setActiveTab] = useState("deliverables");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [projectName, setProjectName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fixedModules: ModuleProgress[] = [
-    { id: "module1", name: "Development", description: "Building the core product features", percentage: 0 },
-    { id: "module2", name: "Documentation", description: "Creating project documentation", percentage: 0 },
-    { id: "module3", name: "Research", description: "Conducting research and analysis", percentage: 0 },
-    { id: "module4", name: "Testing", description: "Testing product functionality", percentage: 0 },
-  ];
+  const {user}=useAuthContext()
+  const projectId=user?.projectId
 
   const fetchProjectData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      if (!projectId || projectId === "undefined") {
-        throw new Error("No project assigned");
-      }
-
-      console.log("Fetching project data for projectId:", projectId);
-      try {
-        const projectData = await getProjectById(projectId);
-        console.log(projectData, "Project data fetched successfully");
-        setProjectName(projectData?.name || "Project");
-      } catch (err) {
-        console.warn("Project endpoint error:", err);
-        setProjectName("Project");
-      }
-
-      try {
-        console.log("Fetching sessions for projectId:", projectId);
-        const sessionsData = await getProjectSessions(projectId);
-        setSessions(sessionsData || []);
-      } catch (err) {
-        console.warn("Sessions endpoint error:", err);
-        setSessions([]);
-      }
-    } catch (err) {
-      console.error("Error fetching project data:", err);
-      setError(err instanceof Error ? err.message : "Failed to load project data");
-    } finally {
-      setLoading(false);
+    if (!projectId || projectId === "undefined") {
+      throw new Error("Invalid project ID");
     }
-  };
+
+    console.log(`[${new Date().toISOString()}] fetchProjectData: Fetching data for project`, { projectId });
+
+    // Fetch project
+    const projectData = await getProjectById(projectId).catch((err) => {
+      console.warn(`[${new Date().toISOString()}] fetchProjectData: Project endpoint error`, { projectId, err });
+      return null;
+    });
+    setProjectName(projectData?.name || "Project");
+
+    // Fetch sessions
+    const sessionsData = await getProjectSessions(projectId).catch((err) => {
+      console.warn(`[${new Date().toISOString()}] fetchProjectData: Sessions endpoint error`, { projectId, err });
+      return [];
+    });
+    setSessions(sessionsData);
+
+ 
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Failed to load project data";
+    console.error(`[${new Date().toISOString()}] fetchProjectData: Critical error`, { projectId, error: errorMessage });
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
-    if (projectId && projectId !== "undefined") {
-      fetchProjectData();
-    } else {
-      setLoading(false);
-    }
+    fetchProjectData();
   }, [projectId]);
 
   useEffect(() => {
@@ -409,11 +455,15 @@ const Progress = () => {
     }
   }, [sessions]);
 
+  const handleTabChange: SelectTabEventHandler = (_event, data) => {
+    setActiveTab(data.value as string);
+  };
+
   const handleSessionClick = (sessionId: string) => {
     setSelectedSessionId(sessionId);
   };
 
-  const handleSessionAdded = () => {
+  const handleDeliverableAdded = () => {
     fetchProjectData();
   };
 
@@ -421,50 +471,33 @@ const Progress = () => {
     fetchProjectData();
   };
 
-  const getSessionModuleProgress = (session: Session): ModuleProgress[] => {
-    return [
-      { id: "module1", name: "Development", description: "Building the core product features", percentage: Number(session.module1) || 0 },
-      { id: "module2", name: "Documentation", description: "Creating project documentation", percentage: Number(session.module2) || 0 },
-      { id: "module3", name: "Research", description: "Conducting research and analysis", percentage: Number(session.module3) || 0 },
-      { id: "module4", name: "Testing", description: "Testing product functionality", percentage: Number(session.module4) || 0 },
-    ];
-  };
-
   const calculateGlobalProgress = () => {
     if (sessions.length === 0) return 0;
-    const lastSession = sessions[sessions.length - 1];
-    const moduleValues = [
-      Number(lastSession.module1) || 0,
-      Number(lastSession.module2) || 0,
-      Number(lastSession.module3) || 0,
-      Number(lastSession.module4) || 0,
-    ];
-    return Math.round(moduleValues.reduce((sum, value) => sum + value, 0) / 4);
+
+    let totalProgress = 0;
+    let totalDeliverables = 0;
+
+    
+
+    return totalDeliverables > 0 ? Math.round(totalProgress / totalDeliverables) : 0;
   };
 
   const globalProgress = calculateGlobalProgress();
-  const hasNoSessions = sessions.length === 0;
-  const currentSession = hasNoSessions
-    ? null
-    : sessions.find((session) => session.id === selectedSessionId) || sessions[0];
-  const currentModules = currentSession ? getSessionModuleProgress(currentSession) : fixedModules;
-  const currentFeedback = currentSession?.feedback;
+  const currentStep = globalProgress; 
 
-  if (!projectId || projectId === "undefined") {
-    return (
-      <div className={styles.layout}>
-        <div className={styles.noProjectContainer}>
-          <div className={styles.noProjectIcon}>
-            <PeopleTeam24Regular style={{ fontSize: "28px" }} />
-          </div>
-          <h3 className={styles.noProjectTitle}>No Project Assigned</h3>
-          <p className={styles.noProjectMessage}>
-            You are not currently assigned to a project. Contact your mentor or join a project to view progress.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const hasNoSessions = sessions.length === 0;
+  const currentSession = hasNoSessions ? null : sessions.find((session) => session.id === selectedSessionId) || null;
+  const currentFeedback=  hasNoSessions
+    ? ""
+    : Array.isArray(currentSession?.feedback)
+      ? currentSession?.feedback
+      : currentSession?.feedback
+        ? [currentSession.feedback]
+        : [];
+  const totalDeliverables = defaultDeliverables.length
+  const totalFeedbacks = hasNoSessions
+    ? 0
+    : sessions.reduce((total, session) => total +  0, 0);
 
   if (loading) {
     return (
@@ -493,7 +526,7 @@ const Progress = () => {
         </div>
         <div className={styles.progressSection}>
           <ProgressBar
-            value={globalProgress / 100}
+            value={0.5 / 100}
             thickness="large"
             className={styles.globalProgressBar}
           />
@@ -502,98 +535,180 @@ const Progress = () => {
 
       <div className={styles.contentWrapper}>
         <div className={styles.mainContent}>
-          <div className={styles.sessionsSection}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className={styles.sessionHeader}>
-                Sessions <span className={styles.sessionCount}>({sessions.length})</span>
-              </h2>
-              <AddSessionModal projectId={projectId!} onSessionAdded={handleSessionAdded} />
-            </div>
-            {hasNoSessions ? (
-              <div className={styles.noSessionsContainer}>
-                <div className={styles.noSessionsIcon}>
-                  <CalendarLtr20Regular style={{ fontSize: "24px" }} />
+          {hasNoSessions ? (
+            <>
+              <div className={styles.sessionsSection}>
+                <h2 className={styles.sessionHeader}>
+                  Sessions <span className={styles.sessionCount}>({sessions.length})</span>
+                </h2>
+                <div className={styles.noSessionsContainer}>
+                  <div className={styles.noSessionsIcon}>
+                    <CalendarLtr20Regular style={{ fontSize: "24px" }} />
+                  </div>
+                  <h3 className={styles.noFeedbackTitle}>No Sessions Yet</h3>
+                  <p className={styles.noFeedbackText}>
+                    When your mentor submits a new progress report, you can see it here.
+                  </p>
                 </div>
-                <h3 className={styles.noFeedbackTitle}>No Sessions Yet</h3>
-                <p className={styles.noFeedbackText}>
-                  When your mentor submits a new progress report, you can see it here.
-                </p>
+                <div className={styles.pagination}>
+                  <div className={styles.paginationItem}>{"<"}</div>
+                  <div className={`${styles.paginationItem} ${styles.paginationItemActive}`}>1</div>
+                  <div className={styles.paginationItem}>{">"}</div>
+                </div>
               </div>
-            ) : (
-              sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={styles.sessionItem}
-                  onClick={() => handleSessionClick(session.id)}
-                  style={{
-                    borderLeft: selectedSessionId === session.id ? `3px solid ${tokens.colorBrandBackground}` : "none",
-                  }}
-                >
-                  <span className={styles.sessionDate}>
-                    {session.date ? new Date(session.date).toLocaleDateString() : "No date available"}
-                  </span>
-                  <ChevronRightRegular />
-                </div>
-              ))
-            )}
-            <div className={styles.pagination}>
-              <div className={styles.paginationItem}>{"<"}</div>
-              <div className={`${styles.paginationItem} ${styles.paginationItemActive}`}>1</div>
-              <div className={styles.paginationItem}>{">"}</div>
-            </div>
-          </div>
 
-          <div className={styles.modulesSection}>
-            <h2 className={styles.sessionHeader}>Module Progress</h2>
-            <div className={styles.modulesList}>
-              {currentModules
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((module) => (
-                  <div key={module.id} className={styles.moduleItem}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span className={styles.moduleName}>{module.name}</span>
-                      <span className={styles.modulePercentage}>{module.percentage}%</span>
+              <div className={styles.deliverablesSection}>
+                <div className={styles.tabContainer}>
+                  <TabList
+                    selectedValue={activeTab} 
+                    onTabSelect={handleTabChange}
+                  >
+                    <Tab value="deliverables">
+                      <div className={styles.statItem}>
+                        {activeTab === "deliverables" ? (
+                          <Folder20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                        ) : (
+                          <Folder20Regular />
+                        )}
+                        <span>Deliverables ({totalDeliverables})</span>
+                      </div>
+                    </Tab>
+                    <Tab value="feedbacks">
+                      <div className={styles.statItem}>
+                        {activeTab === "feedbacks" ? (
+                          <Comment20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                        ) : (
+                          <Comment20Regular />
+                        )}
+                        <span>Feedbacks ({totalFeedbacks})</span>
+                      </div>
+                    </Tab>
+                  </TabList>
+                </div>
+
+                <div className={styles.defaultDeliverablesList}>
+                  {activeTab === "deliverables" ? (
+                    defaultDeliverables.map((item, index) => (
+                      <div key={index} className={styles.deliverableCard}>
+                        <div className={styles.deliverableInfo}>
+                          <div className={styles.deliverableHeader}>
+                            <h3 className={styles.deliverableName}>{item.title}</h3>
+                            <div className={styles.notStartedBadge}>Not started</div>
+                          </div>
+                          <p className={styles.deliverableSubtext}>{item.description}</p>
+                        </div>
+                        <div className={styles.progressInfo}>
+                          <span className={styles.progressPercentageSmall}>{item.progress}%</span>
+                          <span className={styles.progressChange}>{item.change}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.noFeedback}>
+                      <div className={styles.noFeedbackIcon}>
+                        <CommentDismiss24Regular />
+                      </div>
+                      <h3 className={styles.noFeedbackTitle}>No Feedbacks Yet</h3>
+                      <p className={styles.noFeedbackText}>
+                        Once you submit your deliverable, your mentor will review it and leave feedback
+                      </p>
                     </div>
-                    <p className={styles.moduleDescription}>{module.description}</p>
-                    <ProgressBar value={module.percentage / 100} thickness="medium" />
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.sessionsSection}>
+                <h2 className={styles.sessionHeader}>
+                  Sessions <span className={styles.sessionCount}>({sessions.length})</span>
+                </h2>
+                {sessions.map((session, index) => (
+                  <div
+                    key={index}
+                    className={styles.sessionItem}
+                    onClick={() => handleSessionClick(session.id)}
+                    style={{
+                      borderLeft: selectedSessionId === session.id ? `3px solid ${tokens.colorBrandBackground}` : "none",
+                    }}
+                  >
+                    <span className={styles.sessionDate}>{session.date || "No date available"}</span>
+                    <ChevronRightRegular />
                   </div>
                 ))}
-            </div>
-            {currentSession && (
-              <>
-                <h2 className={styles.sessionHeader} style={{ marginTop: "1.5rem" }}>
-                  Feedback ({new Date(currentSession.date).toLocaleDateString()})
-                </h2>
-                <div className={styles.actionsContainer}>
-                  <AddFeedbackModal
-                    sessionId={currentSession.id}
-                    onFeedbackAdded={handleFeedbackAdded}
-                  />
+
+                <div className={styles.pagination}>
+                  <div className={styles.paginationItem}>{"<"}</div>
+                  <div className={`${styles.paginationItem} ${styles.paginationItemActive}`}>1</div>
+                  <div className={styles.paginationItem}>{">"}</div>
                 </div>
-                {currentFeedback ? (
-                  <div className={styles.feedbackCard}>
-                    <div className={styles.feedbackAvatar}>
-                      <CommentDismiss24Regular />
-                    </div>
-                    <div>
-                      <h4 className={styles.moduleName}>{currentFeedback.author || "Anonymous"}</h4>
-                      <p className={styles.feedbackText}>{currentFeedback.text || "No feedback provided"}</p>
-                    </div>
-                  </div>
+              </div>
+
+              <div className={styles.deliverablesSection}>
+                <div className={styles.tabContainer}>
+                  <TabList
+                    selectedValue={activeTab} 
+                    onTabSelect={handleTabChange}
+                  >
+                    <Tab value="deliverables">
+                      <div className={styles.statItem}>
+                        {activeTab === "deliverables" ? (
+                          <Folder20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                        ) : (
+                          <Folder20Regular />
+                        )}
+                        <span>Deliverables ({totalDeliverables})</span>
+                      </div>
+                    </Tab>
+                    <Tab value="feedbacks">
+                      <div className={styles.statItem}>
+                        {activeTab === "feedbacks" ? (
+                          <Comment20Filled style={{ color: tokens.colorBrandForeground1 }} />
+                        ) : (
+                          <Comment20Regular />
+                        )}
+                        <span>Feedbacks ({totalFeedbacks})</span>
+                      </div>
+                    </Tab>
+                  </TabList>
+                </div>
+
+                {activeTab === "deliverables" ? (
+                  <>
+                   
+                     
+                      <div className={styles.noFeedback}>
+                        <div className={styles.noFeedbackIcon}>
+                          <Folder20Filled />
+                        </div>
+                        <h3 className={styles.noFeedbackTitle}>No Deliverables Yet</h3>
+                        <p className={styles.noFeedbackText}>
+                          This session doesn't have any deliverables assigned yet.
+                        </p>
+                      </div>
+                    
+                  </>
                 ) : (
-                  <div className={styles.noFeedback}>
-                    <div className={styles.noFeedbackIcon}>
-                      <CommentDismiss24Regular />
+                  <>
+                    <div className={styles.actionsContainer}>
+                      {currentSession && (
+                        <AddFeedbackModal sessionId={currentSession.id} onFeedbackAdded={handleFeedbackAdded} />
+                      )}
                     </div>
-                    <h3 className={styles.noFeedbackTitle}>No Feedback Yet</h3>
-                    <p className={styles.noFeedbackText}>
-                      Once your mentor reviews your progress, feedback will appear here.
-                    </p>
-                  </div>
+                     <div className={styles.noFeedback}>
+                        <div className={styles.noFeedbackIcon}>
+                          <CommentDismiss24Regular />
+                        </div>
+                        <h3 className={styles.noFeedbackTitle}>No Feedbacks Yet</h3>
+                        <p className={styles.noFeedbackText}>
+                          Once you submit your deliverable, your mentor will review it and leave feedback
+                        </p>
+                      </div>
+                  </>
                 )}
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

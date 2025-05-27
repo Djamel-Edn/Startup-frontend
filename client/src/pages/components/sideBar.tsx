@@ -27,7 +27,7 @@ const useStyles = makeStyles({
     width: "260px",
     display: "flex",
     flexDirection: "column",
-    minHeight: "96%", 
+    minHeight: "97%", 
     borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
     gap: "12px",
     marginTop: "16px",
@@ -198,12 +198,7 @@ const Sidebar: React.FC = () => {
       filledIcon: <DocumentFilled />,
       path: "/mentor/projects-management",
     },
-    {
-      label: "Teams Management",
-      regularIcon: <PeopleTeamRegular />,
-      filledIcon: <PeopleTeamFilled />,
-      path: "/mentor/teams-management",
-    },
+    
   ];
 
   const bottomNavItems = [
