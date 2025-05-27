@@ -61,7 +61,6 @@ const useStyles = makeStyles({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "8px",
   },
   projectTitle: {
     fontSize: "24px",
@@ -78,6 +77,7 @@ const useStyles = makeStyles({
   progressPercentage: {
     fontSize: "32px",
     fontWeight: "700",
+    marginTop: "0.5rem",
     color: tokens.colorBrandForeground1,
   },
   progressChange: {
