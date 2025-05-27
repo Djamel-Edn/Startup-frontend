@@ -12,9 +12,11 @@ import {
   Input,
   makeStyles,
   tokens,
+  Textarea,
 } from "@fluentui/react-components";
 import { CalendarAddRegular } from "@fluentui/react-icons";
 import { createSession } from "../../../api/project-service";
+import { Session } from "../../../types";
 
 const useStyles = makeStyles({
   formField: {
@@ -35,14 +37,15 @@ const useStyles = makeStyles({
 
 interface CreateSessionModalProps {
   projectId: string;
-  onSessionCreated: () => void;
+  onSessionCreated: (newSessionId: string) => void;
 }
 
 const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ projectId, onSessionCreated }) => {
   const styles = useStyles();
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date | null>(null); // Changed to Date | null
   const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -51,12 +54,30 @@ const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ projectId, onSe
       return;
     }
 
+    // Validate date (not in the future)
+    const currentDate = new Date();
+    currentDate.setHours(23, 59, 59, 999);
+    if (date > currentDate) {
+      setError("Session date cannot be in the future");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      await createSession(projectId, { date });
+      const sessionData: Partial<Session> = {
+        date, 
+        summary: summary.trim() || "",
+        module1: "0",
+        module2: "0",
+        module3: "0",
+        module4: "0",
+        feedback: "",
+      };
+
+      const newSession = await createSession(projectId, sessionData);
       setOpen(false);
-      onSessionCreated();
+      onSessionCreated(newSession.id);
     } catch (err) {
       console.error("Error creating session:", err);
       setError(err instanceof Error ? err.message : "Failed to create session");
@@ -65,12 +86,19 @@ const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ projectId, onSe
     }
   };
 
-  const handleOpenChange = (_: any, data: { open: boolean | ((prevState: boolean) => boolean); }) => {
+  const handleOpenChange = (_: any, data: { open: boolean }) => {
     setOpen(data.open);
     if (!data.open) {
-      setDate("");
+      setDate(null); // Reset to null
+      setSummary("");
       setError(null);
     }
+  };
+
+  // Convert Date to YYYY-MM-DD for input value
+  const formatDateForInput = (date: Date | null): string => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
   };
 
   return (
@@ -83,8 +111,25 @@ const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ projectId, onSe
         <DialogBody>
           <div className={styles.formField}>
             <label className={styles.label}>Session Date</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input
+              type="date"
+              value={formatDateForInput(date)} // Convert Date to string
+              onChange={(e) => {
+                const value = e.target.value;
+                setDate(value ? new Date(value) : null); // Convert string to Date
+              }}
+              max={new Date().toISOString().split("T")[0]} // Prevent future dates
+            />
             {error && <div className={styles.errorText}>{error}</div>}
+          </div>
+          <div className={styles.formField}>
+            <label className={styles.label}>Session Summary</label>
+            <Textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Enter session summary..."
+              style={{ width: "100%" }}
+            />
           </div>
         </DialogBody>
         <DialogActions>

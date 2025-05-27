@@ -13,7 +13,7 @@ export interface Feedback {
 
 export interface Session {
   id: string;
-  date: string;
+  date: Date;
   feedback: string;
   summary: string;
   module1:String;

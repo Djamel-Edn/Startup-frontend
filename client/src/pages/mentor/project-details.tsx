@@ -349,7 +349,7 @@ const staticDeliverables: Deliverable[] = [
     change: "",
   },
   {
-    title: "Deliverable name",
+    title: "Scaling",
     description: "Upload your file before the deadline to submit for review",
     status: "not started",
     progress: 0,
@@ -449,6 +449,7 @@ const ProjectDetail = () => {
             }))
           : initialDeliverables
         );
+        setSelectedSessionIndex(mappedSessions.length > 0 ? 0 : 0); // Reset to first session
       } catch (error) {
         console.error("Error fetching project:", error);
         setError("Project not loaded.");
@@ -574,8 +575,18 @@ const ProjectDetail = () => {
       done: "Done",
     }[status] || status);
 
-  const handleSessionCreated = async () => {
+  const handleSessionCreated = (newSessionId: string) => {
     setRefreshTrigger((prev) => prev + 1);
+    // After refresh, select the new session
+    setTimeout(() => {
+      if (project?.progress.sessions) {
+        const newSessionIndex = project.progress.sessions.findIndex(s => s.id === newSessionId);
+        if (newSessionIndex !== -1) {
+          setSelectedSessionIndex(newSessionIndex);
+          handleSessionClick(newSessionIndex);
+        }
+      }
+    }, 0);
   };
 
   if (!isLoading && !user) {
@@ -628,6 +639,13 @@ const ProjectDetail = () => {
         {error && (
           <div style={{ color: tokens.colorStatusDangerForeground1, marginTop: "8px" }}>
             {error}
+            <Button
+              appearance="primary"
+              style={{ marginLeft: "8px" }}
+              onClick={() => setRefreshTrigger(prev => prev + 1)}
+            >
+              Retry
+            </Button>
           </div>
         )}
         <div className={styles.projectInfo}>
@@ -645,7 +663,7 @@ const ProjectDetail = () => {
         <div className={styles.sessionsPanel}>
           <div className={styles.sessionsPanelHeader}>
             <h2 className={styles.sessionsPanelTitle}>
-              Sessions {project?.progress?.sessions && project.progress.sessions.length > 0 ? `(${project.progress.sessions.length})` : "(0)"}
+              Sessions {project?.progress?.sessions?.length && project.progress.sessions.length > 0 ? `(${project.progress.sessions.length})` : "(0)"}
             </h2>
             <CreateSessionModal projectId={projectId || ""} onSessionCreated={handleSessionCreated} />
           </div>
